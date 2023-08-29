@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Uploadity</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Drafts</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="button_home_create">Create</string>
+    <string name="text_home">Start creating post drafts for social media!</string>
+    <string name="text_home_2">In the future you will be able to connect your social media accounts and post them from Uploadity app!</string>
+    <string name="choose_photo">Choose media</string>
+    <string name="add_post">Add Post</string>
+    
+    <string name="LINKEDIN_CLIENT_ID">775zx8tdbz37lj</string>
+    <string name="LINKEDIN_CLIENT_SECRET">UpNygVsjxoYu96iZ</string>
+</resources>
