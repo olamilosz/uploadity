@@ -8,7 +8,8 @@
     <string name="text_home_2">In the future you will be able to connect your social media accounts and post them from Uploadity app!</string>
     <string name="choose_photo">Choose media</string>
     <string name="add_post">Add Post</string>
-    
+    <string name="linkedin">Linkedin</string>
+
     <string name="LINKEDIN_CLIENT_ID">775zx8tdbz37lj</string>
     <string name="LINKEDIN_CLIENT_SECRET">UpNygVsjxoYu96iZ</string>
 </resources>

@@ -1,17 +1,23 @@
 package com.uploadity.ui.home
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import com.uploadity.NewPostActivity
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
+import com.uploadity.R
+import com.uploadity.api.linkedin.LinkedinApi
 import com.uploadity.databinding.FragmentHomeBinding
+import com.uploadity.model.MainViewModel
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
+    private val viewModel: MainViewModel by activityViewModels()
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -33,11 +39,18 @@ class HomeFragment : Fragment() {
             textView.text = it
         }*/
 
-        val newPostButton = binding.button
+        val connectButton = binding.button
 
-        newPostButton.setOnClickListener {
-            startActivity(Intent(activity, NewPostActivity::class.java))
+        connectButton.setOnClickListener {
+            val clientId = getString(R.string.LINKEDIN_CLIENT_ID)
+            val authorizationUrl = LinkedinApi().generateAuthorizationUrl(clientId)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
+            startActivity(intent)
         }
+
+        viewModel.linkedinCode.observe(viewLifecycleOwner, Observer {
+            //got linkedin code
+        })
 
         return root
     }

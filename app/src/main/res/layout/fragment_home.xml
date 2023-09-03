@@ -1,37 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/fragment_home"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
+    android:gravity="top|left"
     android:orientation="vertical"
     android:padding="40dp"
-    tools:context=".ui.home.HomeFragment">
+    tools:context=".ui.home.HomeFragment"
+    tools:ignore="RtlHardcoded">
 
     <TextView
         android:id="@+id/text_home"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
+        android:layout_marginBottom="10dp"
+        android:text="Connect Linkedin"
         android:textSize="20sp"
-        android:layout_marginBottom="20dp"
-        android:text="@string/text_home"/>
+        tools:ignore="HardcodedText" />
 
     <Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/button_home_create" />
+        android:layout_marginBottom="10dp"
+        android:text="connect"
+        tools:ignore="HardcodedText" />
 
     <TextView
-        android:id="@+id/text_home_2"
+        android:id="@+id/text_linkedin_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
+        android:layout_marginBottom="10dp"
+        android:text="Status: "
         android:textSize="20sp"
-        android:layout_marginBottom="20dp"
-        android:text="@string/text_home_2"/>
-
+        tools:ignore="HardcodedText" />
 </LinearLayout>
