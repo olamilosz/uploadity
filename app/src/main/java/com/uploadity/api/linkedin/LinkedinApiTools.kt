@@ -1,13 +1,8 @@
 package com.uploadity.api.linkedin
 
-import com.uploadity.api.linkedin.datamodels.LinkedinAccessTokenParams
-import com.uploadity.api.linkedin.datamodels.LinkedinAccessTokenResponse
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import java.lang.StringBuilder
 
-class LinkedinApi {
+class LinkedinApiTools {
 
     private val redirectUri = "https://uploadity.net.pl/linkedin"
 
@@ -18,7 +13,7 @@ class LinkedinApi {
         authorizeUrl.append("?response_type=code")
         authorizeUrl.append("&client_id=$clientId")
         authorizeUrl.append("&redirect_uri=$redirectUri")
-        authorizeUrl.append("&scope=w_member_social")
+        authorizeUrl.append("&scope=w_member_social%20openid%20profile%20email")
 
         return authorizeUrl.toString()
     }

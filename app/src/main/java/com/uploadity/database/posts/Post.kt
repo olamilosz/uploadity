@@ -1,4 +1,4 @@
-package com.uploadity.database
+package com.uploadity.database.posts
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

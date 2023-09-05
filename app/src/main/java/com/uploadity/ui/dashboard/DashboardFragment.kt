@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.NewPostActivity
 import com.uploadity.R
 import com.uploadity.database.AppDatabase
-import com.uploadity.database.Post
+import com.uploadity.database.posts.Post
 import com.uploadity.databinding.FragmentDashboardBinding
 import com.uploadity.ui.uicomponents.PostItemListAdapter
 
@@ -27,7 +27,6 @@ class DashboardFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var postItemListAdapter: PostItemListAdapter
     private lateinit var appDao: AppDatabase
-    private lateinit var startForResult: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,6 +39,7 @@ class DashboardFragment : Fragment() {
 
         appDao = context?.let { AppDatabase.getInstance(it) }!!
         val postList = appDao.postDao().getAll()
+        Log.d("postList", postList.toString())
         postItemListAdapter = PostItemListAdapter(postList)
 
         postItemListAdapter.setOnClickListener(object : PostItemListAdapter.OnClickListener {
@@ -61,6 +61,8 @@ class DashboardFragment : Fragment() {
             AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
                 ?.let { this.setDrawable(it) }
         })
+
+        appDao.accountDao().getAllAccounts()
 
         return binding.root
     }

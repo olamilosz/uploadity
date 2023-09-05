@@ -13,7 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.snackbar.Snackbar
 import com.uploadity.database.AppDatabase
-import com.uploadity.database.Post
+import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
 
 class NewPostActivity : AppCompatActivity() {
@@ -60,6 +60,7 @@ class NewPostActivity : AppCompatActivity() {
 
         } else {
             toolbar.title = "Create New Post"
+            isInEditMode = false
         }
 
         val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -125,34 +126,32 @@ class NewPostActivity : AppCompatActivity() {
     private fun loadPost(postId: Int) {
         post = appDao.postDao().getPost(postId)!!
 
-        if (post != null) {
-            if (post.title!!.isNotEmpty()) {
-                binding.titleEditText.setText(post.title, TextView.BufferType.EDITABLE)
-            }
+        if (post.title!!.isNotEmpty()) {
+            binding.titleEditText.setText(post.title, TextView.BufferType.EDITABLE)
+        }
 
-            if (post.description!!.isNotEmpty()) {
-                binding.descriptionEditText.setText(post.description, TextView.BufferType.EDITABLE)
-            }
+        if (post.description!!.isNotEmpty()) {
+            binding.descriptionEditText.setText(post.description, TextView.BufferType.EDITABLE)
+        }
 
-            if (post.mediaUri!!.isNotEmpty()) {
-                if (post.isPicture) {
-                    val imageView = binding.imageView
-                    imageView.visibility = View.VISIBLE
-                    imageView.setImageURI(Uri.parse(post.mediaUri))
+        if (post.mediaUri!!.isNotEmpty()) {
+            if (post.isPicture) {
+                val imageView = binding.imageView
+                imageView.visibility = View.VISIBLE
+                imageView.setImageURI(Uri.parse(post.mediaUri))
 
-                } else {
-                    val videoView = binding.videoView
-                    videoView.visibility = View.VISIBLE
-                    videoView.setVideoURI(Uri.parse(post.mediaUri))
+            } else {
+                val videoView = binding.videoView
+                videoView.visibility = View.VISIBLE
+                videoView.setVideoURI(Uri.parse(post.mediaUri))
 
-                    val videoControllerView = binding.videoController
-                    val videoController = MediaController(this)
+                val videoControllerView = binding.videoController
+                val videoController = MediaController(this)
 
-                    videoController.setAnchorView(videoControllerView)
-                    videoController.setMediaPlayer(videoView)
-                    videoView.setMediaController(videoController)
-                    videoView.start()
-                }
+                videoController.setAnchorView(videoControllerView)
+                videoController.setMediaPlayer(videoView)
+                videoView.setMediaController(videoController)
+                videoView.start()
             }
         }
     }
@@ -161,7 +160,7 @@ class NewPostActivity : AppCompatActivity() {
         val title = binding.titleEditText
         val description = binding.descriptionEditText
 
-        if (isMediaSelected) {
+        if (isInEditMode) {
             appDao.postDao().update(
                 Post(
                     post.id, title.text.toString(),

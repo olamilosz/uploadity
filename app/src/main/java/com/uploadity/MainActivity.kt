@@ -1,5 +1,6 @@
 package com.uploadity
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -7,35 +8,44 @@ import android.util.Log
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.uploadity.api.linkedin.LinkedinApi
+import com.uploadity.api.linkedin.LinkedinAccessTokenApiInterface
+import com.uploadity.api.linkedin.LinkedinAccessTokenServiceBuilder
 import com.uploadity.api.linkedin.LinkedinApiInterface
-import com.uploadity.api.linkedin.LinkedinServiceBuilder
-import com.uploadity.api.linkedin.datamodels.LinkedinAccessTokenParams
-import com.uploadity.api.linkedin.datamodels.LinkedinAccessTokenResponse
+import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
+import com.uploadity.api.linkedin.datamodels.AccessTokenResponseModel
+import com.uploadity.api.linkedin.datamodels.UserInfoResponseModel
+import com.uploadity.database.AppDatabase
+import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.ActivityMainBinding
-import com.uploadity.model.MainViewModel
+import com.uploadity.viewmodels.AccountViewModel
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import org.json.JSONArray
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.lang.StringBuilder
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val viewModel: MainViewModel by viewModels()
+    private lateinit var appDao: AppDatabase
+    private val viewModel: AccountViewModel by viewModels()
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        appDao = AppDatabase.getInstance(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -49,7 +59,6 @@ class MainActivity : AppCompatActivity() {
             this.startActivity(intent)
         }
 
-        // handle deep link from linkedin authorize process
         val appLinkIntent: Intent = intent
         val appLinkData: Uri? = appLinkIntent.data
 
@@ -61,12 +70,11 @@ class MainActivity : AppCompatActivity() {
                     if (code != "") {
                         Log.d("LINKEDIN CODE", code)
 
-                        // JEŚLI OTRZYMALIŚMY KOD ODPALAMY ACCESS TOKEN
-                        getAccessToken(
-                            code,
-                            getString(R.string.LINKEDIN_CLIENT_ID),
-                            getString(R.string.LINKEDIN_CLIENT_SECRET)
-                        )
+                        GlobalScope.launch {
+                            getAccessToken(
+                                code
+                            )
+                        }
 
                     } else {
                         Snackbar.make(
@@ -80,30 +88,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getAccessToken2(code: String, clientId: String, clientSecret: String) {
-        val client = OkHttpClient()
+    private fun getAccessToken(code: String) {
+        val linkedinApi = LinkedinAccessTokenServiceBuilder.buildService(LinkedinAccessTokenApiInterface::class.java)
+        val clientId = BuildConfig.LINKEDIN_CLIENT_ID
+        val clientSecret = BuildConfig.LINKEDIN_CLIENT_SECRET
         val mediaType = "application/x-www-form-urlencoded".toMediaType()
-        val body = "client_id=775zx8tdbz37lj&client_secret=UpNygVsjxoYu96iZ&code=AQROlb-e8yWjuh3Qk4FaLirXRFZJ7SrgRtMpjkxIH1eJKQGoJjPdTCBRDsrSAcshX2kquZ6xiaEhXLNPPjZZIBKYuuUNuO9HPmSvHZ1I2d6a7S7ZY2BD9outfvmqSQzYv4ieD8KtIcGMOUepO4EkRmECi3E15bZQuToi-f8w_zlMYlUupRhxyuWQfE19ro4BRVhJh-AtOM198u3Ylrc&grant_type=authorization_code&redirect_uri=https://uploadity.net.pl/linkedin".toRequestBody(mediaType)
-        val request = Request.Builder()
-            .url("https://www.linkedin.com/oauth/v2/accessToken")
-            .post(body)
-            .addHeader("Content-Type", "application/x-www-form-urlencoded")
-            .addHeader("Cookie", "bcookie=\"v=2&aa885746-b94b-42c6-87ec-e73b4f6c50d1\"; lang=v=2&lang=en-us; li_gc=MTswOzE2OTM2ODc0MzY7MjswMjFW7ajRZ88Z8uA+Qta+jdX4I4tUUlCj47RJaDJBnF1LQg==; lidc=\"b=TB42:s=T:r=T:a=T:p=T:g=4554:u=3:x=1:i=1693687497:t=1693764460:v=2:sig=AQFA3QfZiqm_SzkGleLPPaU2jXJCFqJc\"; bscookie=\"v=1&202309022043563c456ef8-6bf9-4300-8d85-a06d774ab9baAQEBOLm7qvm2DYCcGDMNP6sGVYRShJZZ\"")
-            .build()
-        val response = client.newCall(request).execute()
-    }
-
-    private fun getAccessToken(code: String, clientId: String, clientSecret: String) {
-        val linkedinApi = LinkedinServiceBuilder.buildService(LinkedinApiInterface::class.java)
-        val mediaType = "application/x-www-form-urlencoded".toMediaType()
-        val body = "grant_type=authorization_code&client_id=775zx8tdbz37lj&client_secret=UpNygVsjxoYu96iZ&&redirect_uri=https://uploadity.net.pl/linkedin&code=$code"
+        val body = "grant_type=authorization_code&client_id=$clientId&client_secret=$clientSecret&redirect_uri=https://uploadity.net.pl/linkedin&code=$code"
 
         linkedinApi.getAccessToken(
             body.toRequestBody(mediaType)
-        ).enqueue(object : Callback<ResponseBody> {
+        ).enqueue(object : Callback<AccessTokenResponseModel> {
             override fun onResponse(
-                call: Call<ResponseBody>,
-                response: Response<ResponseBody>
+                call: Call<AccessTokenResponseModel>,
+                response: Response<AccessTokenResponseModel>
             ) {
                 Snackbar.make(
                     binding.root,
@@ -111,10 +108,26 @@ class MainActivity : AppCompatActivity() {
                     Snackbar.LENGTH_SHORT
                 ).show()
 
-                Log.d("access token success", response.body().toString())
+                val accessToken = response.body()?.accessToken ?: ""
+
+                if (accessToken.isNotEmpty()) {
+                    val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
+                    with (sharedPreferences.edit()) {
+                        putString(getString(R.string.linkedin_access_token_key), accessToken)
+                        apply()
+                    }
+
+                    Log.d("access token success", accessToken)
+
+                    //user info : GET https://api.linkedin.com/v2/userinfo
+                    getLinkedinUserInfo()
+
+                    //TODO pobrać nazwę użytkownika i zapisać w room
+                    //TODO możliwość usunięcia połączenia z linkedinem
+                }
             }
 
-            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+            override fun onFailure(call: Call<AccessTokenResponseModel>, t: Throwable) {
                 Snackbar.make(
                     binding.root,
                     "Linkedin get access token fail",
@@ -123,7 +136,40 @@ class MainActivity : AppCompatActivity() {
 
                 Log.e("access token fail", t.message ?: "")
             }
-
         })
+    }
+
+    private fun getLinkedinUserInfo() {
+        val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
+        val accessToken = sharedPreferences.getString(getString(R.string.linkedin_access_token_key), "")
+        val linkedinApi = LinkedinApiServiceBuilder.buildService(LinkedinApiInterface::class.java)
+
+        if (accessToken != "") {
+            linkedinApi.getUserInfo(
+                "Bearer $accessToken"
+            ).enqueue(object : Callback<UserInfoResponseModel> {
+                override fun onResponse(
+                    call: Call<UserInfoResponseModel>,
+                    response: Response<UserInfoResponseModel>
+                ) {
+                    val userInfo = response.body()
+
+                    if (userInfo != null) {
+                        appDao.accountDao().insert(
+                            Account(
+                                0, userInfo.name,
+                                userInfo.picture,
+                                userInfo.email,
+                                "linkedin"
+                            )
+                        )
+                    }
+                }
+
+                override fun onFailure(call: Call<UserInfoResponseModel>, t: Throwable) {
+                    Log.e("user info failure", t.message.toString())
+                }
+            })
+        }
     }
 }

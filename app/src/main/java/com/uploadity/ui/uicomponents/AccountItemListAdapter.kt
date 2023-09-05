@@ -1,5 +1,7 @@
 package com.uploadity.ui.uicomponents
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.view.LayoutInflater
@@ -9,14 +11,17 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.R
-import com.uploadity.database.posts.Post
+import com.uploadity.database.accounts.Account
 
-class PostItemListAdapter(private val dataSet: List<Post>) :
-    RecyclerView.Adapter<PostItemListAdapter.ViewHolder>() {
+class AccountItemListAdapter(private val dataSet: List<Account>) :
+    RecyclerView.Adapter<AccountItemListAdapter.ViewHolder>() {
 
     private var onClickListener: OnClickListener? = null
+    private lateinit var context: Context
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textView: TextView
@@ -30,27 +35,33 @@ class PostItemListAdapter(private val dataSet: List<Post>) :
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int
+    ): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.post_item_list_adapter, parent, false)
+
+        context = parent.context
 
         return ViewHolder(view)
     }
 
     override fun getItemCount() = dataSet.size
 
+    @SuppressLint("UseCompatLoadingForDrawables")
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val post = dataSet[position]
-        holder.textView.text = post.title
+        val account = dataSet[position]
+        holder.textView.text = account.name
 
-        if (post.isPicture) {
-            holder.imageView.setImageURI(Uri.parse(post.mediaUri))
+        if (account.socialMediaServiceName == "linkedin") {
+            holder.imageView.setImageDrawable(context.getDrawable(R.drawable.linkedin_icon))
         }
 
         holder.rowItem.setOnClickListener {
             if (onClickListener != null) {
-                onClickListener!!.onClick(position, post)
+                onClickListener!!.onClick(position, account)
             }
         }
     }
@@ -60,6 +71,7 @@ class PostItemListAdapter(private val dataSet: List<Post>) :
     }
 
     interface OnClickListener {
-        fun onClick(position: Int, post: Post)
+        fun onClick(position: Int, account: Account)
     }
+
 }

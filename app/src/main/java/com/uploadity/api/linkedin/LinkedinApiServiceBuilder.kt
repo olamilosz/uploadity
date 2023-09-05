@@ -6,7 +6,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object LinkedinServiceBuilder {
+object LinkedinApiServiceBuilder {
     private val interceptor = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
 
     private val client = OkHttpClient.Builder().addInterceptor(interceptor).build()
@@ -14,7 +14,7 @@ object LinkedinServiceBuilder {
     private val gson = GsonBuilder().setLenient().create()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("https://www.linkedin.com/")
+        .baseUrl("https://api.linkedin.com/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
