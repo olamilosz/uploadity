@@ -1,10 +1,11 @@
 package com.uploadity
 
 import android.annotation.SuppressLint
-import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.snackbar.Snackbar
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.ActivityAccountBinding
@@ -35,7 +36,6 @@ class AccountActivity : AppCompatActivity() {
         if (intent != null && intent.extras != null && intent.extras!!.containsKey("account_id")) {
             val accountId = intent.extras!!.getInt("account_id")
             account = appDao.accountDao().getAccount(accountId)!!
-
             binding.name.text = account.name
             binding.email.text = account.email
 
@@ -48,8 +48,26 @@ class AccountActivity : AppCompatActivity() {
 
         val deleteButton = binding.deleteButton
         deleteButton.setOnClickListener {
-            appDao.accountDao().delete(account)
-            finish()
+            val builder: AlertDialog.Builder = this.let {
+                AlertDialog.Builder(it)
+            }
+
+            builder.setMessage("Are you sure to delete this account?")
+            builder.apply {
+                setPositiveButton("delete"
+                ) { _, _ ->
+                    appDao.accountDao().delete(account)
+                    Snackbar.make(binding.root, "Post successfully deleted", Snackbar.LENGTH_SHORT).show()
+                    finish()
+                }
+
+                setNegativeButton("no"
+                ) { dialog, _ ->
+                    dialog.cancel()
+                }
+            }
+
+            builder.create().show()
         }
     }
 

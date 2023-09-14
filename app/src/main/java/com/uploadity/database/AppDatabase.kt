@@ -9,7 +9,7 @@ import com.uploadity.database.accounts.AccountDao
 import com.uploadity.database.posts.Post
 import com.uploadity.database.posts.PostDao
 
-@Database(entities = [Post::class, Account::class], version = 2, exportSchema = true)
+@Database(entities = [Post::class, Account::class], version = 4, exportSchema = true)
 abstract class AppDatabase : RoomDatabase()  {
     private lateinit var databaseInstance: AppDatabase
 

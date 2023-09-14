@@ -35,8 +35,6 @@ class HomeFragment : Fragment() {
     private lateinit var accountItemListAdapter: AccountItemListAdapter
     private lateinit var appDao: AppDatabase
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
     private val binding get() = _binding!!
 
     override fun onCreateView(

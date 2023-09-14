@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -24,8 +23,6 @@ class DashboardFragment : Fragment() {
 
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var postItemListAdapter: PostItemListAdapter
     private lateinit var appDao: AppDatabase
 
     override fun onCreateView(
@@ -36,33 +33,62 @@ class DashboardFragment : Fragment() {
         val dashboardViewModel =
             ViewModelProvider(this)[DashboardViewModel::class.java]
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
-
         appDao = context?.let { AppDatabase.getInstance(it) }!!
-        val postList = appDao.postDao().getAll()
-        Log.d("postList", postList.toString())
-        postItemListAdapter = PostItemListAdapter(postList)
 
-        postItemListAdapter.setOnClickListener(object : PostItemListAdapter.OnClickListener {
-            override fun onClick(position: Int, post: Post) {
-                //open edit post activity and pass data
-                Log.d("post item click", "ON CLICK: postition $position ${post.title}")
+        val publishedPostList = appDao.postDao().getAllPublishedPosts()
+        val unpublishedPostList = appDao.postDao().getAllUnpublishedPosts()
 
-                val intent = Intent(context, NewPostActivity::class.java)
-                intent.putExtra("post_id", post.id)
-                intent.putExtra("position", position)
-                startActivity(intent)
-            }
-        })
+        if (publishedPostList.isNotEmpty()) {
+            binding.publishedPostsLabel.visibility = View.VISIBLE
+            binding.publishedPostsRecyclerView.visibility = View.VISIBLE
 
-        recyclerView = binding.recyclerView
-        recyclerView.layoutManager = LinearLayoutManager(activity)
-        recyclerView.adapter = postItemListAdapter
-        recyclerView.addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL).apply {
-            AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
-                ?.let { this.setDrawable(it) }
-        })
+            val postItemListAdapter = PostItemListAdapter(publishedPostList)
+            val publishedPostsRecyclerView = binding.publishedPostsRecyclerView
 
-        appDao.accountDao().getAllAccounts()
+            postItemListAdapter.setOnClickListener(object : PostItemListAdapter.OnClickListener {
+                override fun onClick(position: Int, post: Post) {
+                    //open edit post activity and pass data
+                    Log.d("published post item click", "ON CLICK: postition $position ${post.title}")
+
+                    val intent = Intent(context, NewPostActivity::class.java)
+                    intent.putExtra("post_id", post.id)
+                    startActivity(intent)
+                }
+            })
+
+            publishedPostsRecyclerView.layoutManager = LinearLayoutManager(activity)
+            publishedPostsRecyclerView.adapter = postItemListAdapter
+            publishedPostsRecyclerView.addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL).apply {
+                AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
+                    ?.let { this.setDrawable(it) }
+            })
+        }
+
+        if (unpublishedPostList.isNotEmpty()) {
+            binding.unpublishedPostsLabel.visibility = View.VISIBLE
+            binding.unpublishedPostsRecyclerView.visibility = View.VISIBLE
+
+            val postItemListAdapter = PostItemListAdapter(unpublishedPostList)
+            val unpublishedPostsRecyclerView = binding.unpublishedPostsRecyclerView
+
+            postItemListAdapter.setOnClickListener(object : PostItemListAdapter.OnClickListener {
+                override fun onClick(position: Int, post: Post) {
+                    //open edit post activity and pass data
+                    Log.d("unpublished post item click", "ON CLICK: postition $position ${post.title}")
+
+                    val intent = Intent(context, NewPostActivity::class.java)
+                    intent.putExtra("post_id", post.id)
+                    startActivity(intent)
+                }
+            })
+
+            unpublishedPostsRecyclerView.layoutManager = LinearLayoutManager(activity)
+            unpublishedPostsRecyclerView.adapter = postItemListAdapter
+            unpublishedPostsRecyclerView.addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL).apply {
+                AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
+                    ?.let { this.setDrawable(it) }
+            })
+        }
 
         return binding.root
     }

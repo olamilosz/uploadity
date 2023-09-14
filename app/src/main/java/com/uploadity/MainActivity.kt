@@ -8,7 +8,9 @@ import android.util.Log
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -22,15 +24,16 @@ import com.uploadity.api.linkedin.datamodels.UserInfoResponseModel
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.ActivityMainBinding
+import com.uploadity.tools.UserDataStore
 import com.uploadity.viewmodels.AccountViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.ResponseBody
-import org.json.JSONArray
-import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -71,9 +74,7 @@ class MainActivity : AppCompatActivity() {
                         Log.d("LINKEDIN CODE", code)
 
                         GlobalScope.launch {
-                            getAccessToken(
-                                code
-                            )
+                            getAccessToken(code)
                         }
 
                     } else {
@@ -104,26 +105,27 @@ class MainActivity : AppCompatActivity() {
             ) {
                 Snackbar.make(
                     binding.root,
-                    "Linkedin get access token success",
+                    "Linkedin access token success",
                     Snackbar.LENGTH_SHORT
                 ).show()
 
                 val accessToken = response.body()?.accessToken ?: ""
 
                 if (accessToken.isNotEmpty()) {
-                    val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
+                    /*val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
                     with (sharedPreferences.edit()) {
                         putString(getString(R.string.linkedin_access_token_key), accessToken)
                         apply()
+                    }*/
+
+                    //TODO datastore access token
+
+                    runBlocking {
+                        addStringDataStoreValue(getString(R.string.linkedin_access_token_key), accessToken)
                     }
 
                     Log.d("access token success", accessToken)
-
-                    //user info : GET https://api.linkedin.com/v2/userinfo
                     getLinkedinUserInfo()
-
-                    //TODO pobrać nazwę użytkownika i zapisać w room
-                    //TODO możliwość usunięcia połączenia z linkedinem
                 }
             }
 
@@ -155,9 +157,24 @@ class MainActivity : AppCompatActivity() {
                     val userInfo = response.body()
 
                     if (userInfo != null) {
+                        /*with (sharedPreferences.edit()) {
+                            putString(getString(R.string.linkedin_id_key), userInfo.id)
+                            apply()
+                        }*/
+
+                        //TODO datastore id
+
+                        runBlocking {
+                            addStringDataStoreValue(getString(R.string.linkedin_id_key), userInfo.id)
+                        }
+
+                        Log.d("user info id", "user id: ${userInfo.id}")
+
                         appDao.accountDao().insert(
                             Account(
-                                0, userInfo.name,
+                                0,
+                                userInfo.id,
+                                userInfo.name,
                                 userInfo.picture,
                                 userInfo.email,
                                 "linkedin"
@@ -167,9 +184,19 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<UserInfoResponseModel>, t: Throwable) {
-                    Log.e("user info failure", t.message.toString())
+                    Log.e("User info failure", t.message.toString())
                 }
             })
         }
+    }
+
+    private suspend fun addStringDataStoreValue(key: String, value: String) {
+        val store = UserDataStore(applicationContext)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            store.saveStringPreference(key, value)
+        }
+
+        Log.d("MAIN activity SAVE PREFERENCE", "key $key value $value")
     }
 }

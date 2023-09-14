@@ -13,6 +13,12 @@ interface PostDao {
     @Query("SELECT * FROM posts")
     fun getAll(): List<Post>
 
+    @Query("SELECT * FROM posts WHERE isPublished = 0")
+    fun getAllUnpublishedPosts(): List<Post>
+
+    @Query("SELECT * FROM posts WHERE isPublished = 1")
+    fun getAllPublishedPosts(): List<Post>
+
     @Query("SELECT * FROM posts")
     fun getAllLive(): LiveData<List<Post>>
 

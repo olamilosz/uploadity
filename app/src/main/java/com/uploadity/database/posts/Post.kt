@@ -9,5 +9,7 @@ data class Post(
     val title: String?,
     val description: String?,
     val mediaUri: String?,
-    val isPicture: Boolean
+    val isPicture: Boolean,
+    var isPublished: Boolean,
+    val postLink: String?
 )

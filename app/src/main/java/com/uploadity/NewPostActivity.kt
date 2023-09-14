@@ -1,5 +1,6 @@
 package com.uploadity
 
+import android.content.Context
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -12,9 +13,20 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.snackbar.Snackbar
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.uploadity.api.linkedin.LinkedinApiInterface
+import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
+import com.uploadity.tools.UserDataStore
+import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody
+import org.json.JSONObject
+import retrofit2.Call
 
 class NewPostActivity : AppCompatActivity() {
 
@@ -113,6 +125,11 @@ class NewPostActivity : AppCompatActivity() {
 
             builder.create().show()
         }
+
+        binding.publishButton.setOnClickListener {
+            Log.d("publish", "publish button clicked")
+            initializeUpload()
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -121,6 +138,50 @@ class NewPostActivity : AppCompatActivity() {
         }
 
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun initializeUpload() {
+        //TODO datastore get accesstoken i id
+        var accessToken = ""
+        var userId = ""
+
+        runBlocking {
+            accessToken = getStringPreference(getString(R.string.linkedin_access_token_key))
+        }
+
+        runBlocking {
+            userId = getStringPreference(getString(R.string.linkedin_id_key))
+        }
+
+        //val sharedPreferences = this.getPreferences(Context.MODE_PRIVATE) ?: return
+        //val accessToken = sharedPreferences.getString(getString(R.string.linkedin_access_token_key), "")
+        //val userId = sharedPreferences.getString(getString(R.string.linkedin_id_key), "")
+        Log.d("initializeUpload", "accessToken: $accessToken userId: $userId")
+
+        if (accessToken != "") {
+            val linkedinApi = LinkedinApiServiceBuilder.buildService(LinkedinApiInterface::class.java)
+            val owner = JsonObject()
+            val body = JsonObject()
+            owner.addProperty("owner", "urn:li:person:$userId")
+            body.add("initializeUploadRequest", owner)
+            val mediaType = "application/json".toMediaType()
+
+            linkedinApi.initializeImageUpload(
+                "Bearer $accessToken",
+                body.toString().toRequestBody(mediaType)
+            ).enqueue(object : retrofit2.Callback<ResponseBody> {
+                override fun onResponse(
+                    call: Call<ResponseBody>,
+                    response: retrofit2.Response<ResponseBody>
+                ) {
+                    Log.d("initializeUpload", "onResponse: ${response.body().toString()}")
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    Log.e("initializeUpload", "onFailure: ${t.message}")
+                }
+            })
+        }
     }
 
     private fun loadPost(postId: Int) {
@@ -135,6 +196,8 @@ class NewPostActivity : AppCompatActivity() {
         }
 
         if (post.mediaUri!!.isNotEmpty()) {
+            isMediaSelected = true
+
             if (post.isPicture) {
                 val imageView = binding.imageView
                 imageView.visibility = View.VISIBLE
@@ -154,6 +217,21 @@ class NewPostActivity : AppCompatActivity() {
                 videoView.start()
             }
         }
+
+        //TODO: to jest funkcja load post a nie publish - do uporządkowania
+
+        if (!post.isPublished) {
+            binding.publishButton.visibility = View.VISIBLE
+            binding.publishButton.setOnClickListener {
+                //TODO OPUBLIKOWAĆ POSTA!!!!!!!!!!!!!!! póki co tylko linkedin jeśli jest połączony
+                //TODO jeśli mamy access token i jeśli publikacja posta jest ok to wtedy dopiero update posta dao
+
+
+                post.isPublished = true
+                appDao.postDao().update(post)
+                finish()
+            }
+        }
     }
 
     private fun savePost() {
@@ -164,17 +242,29 @@ class NewPostActivity : AppCompatActivity() {
             appDao.postDao().update(
                 Post(
                     post.id, title.text.toString(),
-                    description.text.toString(), mediaUri.toString(), isPicture
+                    description.text.toString(), mediaUri.toString(), isPicture,
+                    false, ""
                 )
             )
 
         } else {
-            appDao.postDao().insert(
-                Post(
-                    0, title.text.toString(),
-                    description.text.toString(), mediaUri.toString(), isPicture
+            if (isMediaSelected) {
+                appDao.postDao().insert(
+                    Post(
+                        0, title.text.toString(),
+                        description.text.toString(), mediaUri.toString(), isPicture,
+                        false, ""
+                    )
                 )
-            )
+            } else {
+                appDao.postDao().insert(
+                    Post(
+                        0, title.text.toString(),
+                        description.text.toString(), "", isPicture,
+                        false, ""
+                    )
+                )
+            }
         }
 
         finish()
@@ -213,7 +303,14 @@ class NewPostActivity : AppCompatActivity() {
         } else {
             isMediaSelected = false
             Snackbar.make(binding.root, "Invalid media format", Snackbar.LENGTH_SHORT).show()
-            //Log.e("chooseMedia", "URI not a video or image: $uri")
         }
+    }
+
+    private suspend fun getStringPreference(key: String): String {
+        val value = UserDataStore(applicationContext).getStringPreference(key)
+
+        Log.d("getStringPreference", "key: $key value: $value")
+
+        return value
     }
 }

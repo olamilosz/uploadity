@@ -3,7 +3,7 @@ package com.uploadity.api.linkedin.datamodels
 import com.google.gson.annotations.SerializedName
 
 data class UserInfoResponseModel(
-    @SerializedName("sub") val sub: String,
+    @SerializedName("sub") val id: String,
     @SerializedName("name") val name: String,
     @SerializedName("given_name") val givenName: String,
     @SerializedName("family_name") val familyName: String,
