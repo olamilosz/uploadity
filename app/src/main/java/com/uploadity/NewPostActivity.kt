@@ -1,8 +1,9 @@
 package com.uploadity
 
-import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
@@ -12,8 +13,8 @@ import android.widget.TextView
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.uploadity.api.linkedin.LinkedinApiInterface
 import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
@@ -23,10 +24,20 @@ import com.uploadity.databinding.ActivityNewPostBinding
 import com.uploadity.tools.UserDataStore
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import okio.IOException
 import org.json.JSONObject
 import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.io.File
+import java.io.FileOutputStream
 
 class NewPostActivity : AppCompatActivity() {
 
@@ -37,6 +48,7 @@ class NewPostActivity : AppCompatActivity() {
     private var isPicture = true
     private var isMediaSelected = false
     private var isInEditMode = false
+    private var wasMediaChanged = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,19 +118,17 @@ class NewPostActivity : AppCompatActivity() {
 
             builder.setMessage("Are you sure to delete this post?")
             builder.apply {
-                setPositiveButton("delete"
-                ) { _, _ ->
+                setPositiveButton("delete") { _, _ ->
                     val post = appDao.postDao().getPost(intent.extras!!.getInt("post_id"))
                     if (post != null) {
-                        appDao.postDao().delete(post)
+                        deletePost(post)
                         Snackbar.make(binding.root, "Post successfully deleted", Snackbar.LENGTH_SHORT).show()
                     }
 
                     finish()
                 }
 
-                setNegativeButton("no"
-                ) { dialog, _ ->
+                setNegativeButton("no") { dialog, _ ->
                     dialog.cancel()
                 }
             }
@@ -127,9 +137,25 @@ class NewPostActivity : AppCompatActivity() {
         }
 
         binding.publishButton.setOnClickListener {
-            Log.d("publish", "publish button clicked")
-            initializeUpload()
+            if (isMediaSelected) {
+                Log.d("publish", "publish button clicked")
+                initializeUpload()
+
+            } else {
+                Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
+            }
         }
+    }
+
+    private fun deletePost(post: Post) {
+        val postId = post.id
+        val imageFile = File(applicationContext.filesDir, "post_$postId.png")
+
+        if (imageFile.exists()) {
+            imageFile.delete()
+        }
+
+        appDao.postDao().delete(post)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -153,9 +179,6 @@ class NewPostActivity : AppCompatActivity() {
             userId = getStringPreference(getString(R.string.linkedin_id_key))
         }
 
-        //val sharedPreferences = this.getPreferences(Context.MODE_PRIVATE) ?: return
-        //val accessToken = sharedPreferences.getString(getString(R.string.linkedin_access_token_key), "")
-        //val userId = sharedPreferences.getString(getString(R.string.linkedin_id_key), "")
         Log.d("initializeUpload", "accessToken: $accessToken userId: $userId")
 
         if (accessToken != "") {
@@ -169,12 +192,22 @@ class NewPostActivity : AppCompatActivity() {
             linkedinApi.initializeImageUpload(
                 "Bearer $accessToken",
                 body.toString().toRequestBody(mediaType)
-            ).enqueue(object : retrofit2.Callback<ResponseBody> {
+            ).enqueue(object : Callback<ResponseBody> {
                 override fun onResponse(
                     call: Call<ResponseBody>,
-                    response: retrofit2.Response<ResponseBody>
+                    response: Response<ResponseBody>
                 ) {
-                    Log.d("initializeUpload", "onResponse: ${response.body().toString()}")
+                    val responseModel = response.body()?.string()
+                    val jsonObject = JSONObject(responseModel ?: "")
+                    val uploadUrl = JSONObject(jsonObject["value"].toString())["uploadUrl"].toString()
+                    Log.d("initializeUpload", "onResponse value: $uploadUrl")
+
+                    if (responseModel != null && mediaUri.toString().isNotEmpty()) {
+                        uploadPicture(uploadUrl)
+
+                    } else {
+                        Log.e("initializeImageUpload", "Couldn't extract uploadUrl value")
+                    }
                 }
 
                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
@@ -182,6 +215,45 @@ class NewPostActivity : AppCompatActivity() {
                 }
             })
         }
+    }
+
+    private fun uploadPicture(uploadUrl: String) {
+        val client = OkHttpClient()
+
+        //TODO: zrobic zeby w media uri zostawaly dwa x / a nie recznie to poprawiac
+        val mediaPath = mediaUri.toString()
+        val imageType = mediaPath.substring(mediaPath.lastIndexOf(".") + 1)
+        var userId = ""
+        Log.e("uploadPicture path", mediaPath)
+        val file = File(mediaPath)
+
+        runBlocking {
+            userId = getStringPreference(getString(R.string.linkedin_id_key))
+        }
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("image", "filename",
+                file.asRequestBody("image/$imageType".toMediaTypeOrNull()))
+            .build()
+
+        val request = Request.Builder()
+            .header("Authorization", "Bearer $userId")
+            .url(uploadUrl)
+            .post(requestBody)
+            .build()
+
+        Log.e("uploadPicture request", request.body.toString())
+
+        client.newCall(request).enqueue(object: okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                Log.e("uploadPicture onFailure", e.message.toString())
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                Log.d("uploadPicture onResponse", "onResponse ${response.body.string()}")
+            }
+        })
     }
 
     private fun loadPost(postId: Int) {
@@ -197,6 +269,7 @@ class NewPostActivity : AppCompatActivity() {
 
         if (post.mediaUri!!.isNotEmpty()) {
             isMediaSelected = true
+            mediaUri = Uri.parse(post.mediaUri?: "")
 
             if (post.isPicture) {
                 val imageView = binding.imageView
@@ -220,7 +293,7 @@ class NewPostActivity : AppCompatActivity() {
 
         //TODO: to jest funkcja load post a nie publish - do uporządkowania
 
-        if (!post.isPublished) {
+        /*if (!post.isPublished) {
             binding.publishButton.visibility = View.VISIBLE
             binding.publishButton.setOnClickListener {
                 //TODO OPUBLIKOWAĆ POSTA!!!!!!!!!!!!!!! póki co tylko linkedin jeśli jest połączony
@@ -231,7 +304,7 @@ class NewPostActivity : AppCompatActivity() {
                 appDao.postDao().update(post)
                 finish()
             }
-        }
+        }*/
     }
 
     private fun savePost() {
@@ -239,23 +312,75 @@ class NewPostActivity : AppCompatActivity() {
         val description = binding.descriptionEditText
 
         if (isInEditMode) {
-            appDao.postDao().update(
-                Post(
-                    post.id, title.text.toString(),
-                    description.text.toString(), mediaUri.toString(), isPicture,
-                    false, ""
-                )
-            )
+            if (isMediaSelected) {
+                if (wasMediaChanged) {
+                    val file = File(applicationContext.filesDir, "post_${post.id}.png")
+
+                    if (!file.exists()) {
+                        file.createNewFile()
+                    }
+
+                    //TODO: zrobić wersję dla niższego SDK
+                    if (Build.VERSION.SDK_INT > 28) {
+                        val source = ImageDecoder.createSource(contentResolver, mediaUri)
+                        val bitmap = ImageDecoder.decodeBitmap(source)
+                        val fileOutputStream = FileOutputStream(file)
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream)
+                        fileOutputStream.flush()
+                        fileOutputStream.close()
+
+                        Log.d("savePost FILE",
+                            "update post, mediachanged true file name: ${file.name} path: ${file.absolutePath}")
+                    }
+
+                    val mediaUri = file.toURI().toString()
+                    post.mediaUri = mediaUri
+                }
+
+                post.description = description.text.toString()
+                post.title = title.text.toString()
+                post.isPicture = isPicture
+
+                appDao.postDao().update(post)
+            }
 
         } else {
             if (isMediaSelected) {
-                appDao.postDao().insert(
-                    Post(
-                        0, title.text.toString(),
-                        description.text.toString(), mediaUri.toString(), isPicture,
-                        false, ""
-                    )
+                val post = Post(
+                    0, title.text.toString(),
+                    description.text.toString(), "", isPicture,
+                    false, ""
                 )
+
+                val postId = appDao.postDao().insertAndGetId(post)
+
+                //stworzenie pliku ze zdjeciem w lokalizacji aplikacji
+                val file = File(applicationContext.filesDir, "post_$postId.png")
+
+                if (!file.exists()) {
+                    file.createNewFile()
+                }
+
+                if (Build.VERSION.SDK_INT > 28) {
+                    val source = ImageDecoder.createSource(contentResolver, mediaUri)
+                    val bitmap = ImageDecoder.decodeBitmap(source)
+                    val fileOutputStream = FileOutputStream(file)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream)
+                    fileOutputStream.flush()
+                    fileOutputStream.close()
+
+                    Log.d("savePost FILE",
+                        "file name: ${file.name} path: ${file.absolutePath}")
+                }
+
+                val mediaUri = file.toURI().toString()
+                post.mediaUri = mediaUri
+                post.id = postId.toInt()
+
+                appDao.postDao().update(post)
+
+                Log.d("save post", "Post id ${post.id} media uri ${post.mediaUri} ismediaselsected $isMediaSelected")
+
             } else {
                 appDao.postDao().insert(
                     Post(
@@ -264,26 +389,21 @@ class NewPostActivity : AppCompatActivity() {
                         false, ""
                     )
                 )
+
+                Log.d("save post", "Post id ${post.id} media uri empty ismediaselsected $isMediaSelected")
             }
         }
 
         finish()
     }
 
-
     private fun chooseMedia(uri: Uri) {
         val imageView = binding.imageView
         val videoView = binding.videoView
         mediaUri = uri
+        wasMediaChanged = true
 
-        if (uri.path!!.contains("image")) {
-            isPicture = true
-            isMediaSelected = true
-            videoView.visibility = View.GONE
-            imageView.setImageURI(uri)
-            imageView.visibility = View.VISIBLE
-
-        } else if (uri.path!!.contains("video")) {
+        if (uri.path!!.contains("video")) {
             isPicture = false
             isMediaSelected = true
             imageView.visibility = View.GONE
@@ -301,8 +421,11 @@ class NewPostActivity : AppCompatActivity() {
             videoView.start()
 
         } else {
-            isMediaSelected = false
-            Snackbar.make(binding.root, "Invalid media format", Snackbar.LENGTH_SHORT).show()
+            isPicture = true
+            isMediaSelected = true
+            videoView.visibility = View.GONE
+            imageView.setImageURI(uri)
+            imageView.visibility = View.VISIBLE
         }
     }
 

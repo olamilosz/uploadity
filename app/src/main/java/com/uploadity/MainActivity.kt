@@ -8,15 +8,12 @@ import android.util.Log
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.uploadity.api.linkedin.LinkedinAccessTokenApiInterface
-import com.uploadity.api.linkedin.LinkedinAccessTokenServiceBuilder
+import com.uploadity.api.linkedin.LinkedinBaseApiInterface
+import com.uploadity.api.linkedin.LinkedinBaseApiServiceBuilder
 import com.uploadity.api.linkedin.LinkedinApiInterface
 import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
 import com.uploadity.api.linkedin.datamodels.AccessTokenResponseModel
@@ -90,7 +87,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getAccessToken(code: String) {
-        val linkedinApi = LinkedinAccessTokenServiceBuilder.buildService(LinkedinAccessTokenApiInterface::class.java)
+        val linkedinApi = LinkedinBaseApiServiceBuilder.buildService(LinkedinBaseApiInterface::class.java)
         val clientId = BuildConfig.LINKEDIN_CLIENT_ID
         val clientSecret = BuildConfig.LINKEDIN_CLIENT_SECRET
         val mediaType = "application/x-www-form-urlencoded".toMediaType()

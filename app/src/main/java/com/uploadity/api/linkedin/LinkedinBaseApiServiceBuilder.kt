@@ -6,7 +6,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object LinkedinAccessTokenServiceBuilder {
+object LinkedinBaseApiServiceBuilder {
     private val interceptor = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
 
     private val client = OkHttpClient.Builder().addInterceptor(interceptor).build()

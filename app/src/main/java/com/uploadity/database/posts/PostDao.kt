@@ -28,6 +28,9 @@ interface PostDao {
     @Insert
     fun insert(post: Post)
 
+    @Insert
+    fun insertAndGetId(post: Post): Long
+
     @Update
     fun update(post: Post)
 

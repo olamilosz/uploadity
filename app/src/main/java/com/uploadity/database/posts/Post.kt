@@ -5,11 +5,11 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "posts")
 data class Post(
-    @PrimaryKey(autoGenerate = true) val id: Int,
-    val title: String?,
-    val description: String?,
-    val mediaUri: String?,
-    val isPicture: Boolean,
+    @PrimaryKey(autoGenerate = true) var id: Int,
+    var title: String?,
+    var description: String?,
+    var mediaUri: String?,
+    var isPicture: Boolean,
     var isPublished: Boolean,
     val postLink: String?
 )
