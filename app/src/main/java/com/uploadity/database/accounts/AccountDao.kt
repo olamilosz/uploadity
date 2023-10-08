@@ -21,13 +21,11 @@ interface AccountDao {
     fun getAccount(id: Int): Account?
 
     @Insert
-    fun insert(account: Account)
+    fun insert(account: Account): Long
 
     @Update
     fun update(account: Account)
 
     @Delete
     fun delete(account: Account)
-
-
 }

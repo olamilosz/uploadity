@@ -145,10 +145,19 @@
                 android:id="@+id/publishButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
                 android:backgroundTint="@color/apple_green"
                 android:gravity="center"
                 android:text="Publish"
+                tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/publishTumblrButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:backgroundTint="@color/teal_700"
+                android:gravity="center"
+                android:text="Publish on Tumblr"
                 tools:ignore="HardcodedText" />
         </LinearLayout>
     </ScrollView>

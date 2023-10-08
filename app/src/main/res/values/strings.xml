@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Uploadity</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Drafts</string>
@@ -14,6 +14,11 @@
     <string name="LINKEDIN_CLIENT_SECRET">UpNygVsjxoYu96iZ</string>
     <string name="linkedin_access_token_key">linkedin_access_token_key</string>
     <string name="linkedin_id_key">linkedin_id_key</string>
+
+    <string name="TUMBLR_CLIENT_ID" tools:ignore="Typos">sH2NCmI57JZ8RdhprhPng28l8gO65EX1CVWPfCqF1xLwbsXhNf</string>
+    <string name="TUMBLR_CLIENT_SECRET">tX16AhNqRlO2VagtLQWxjG953q4jymKZ4dga95jlbfo5oR2R7Z</string>
+    <string name="tumblr_access_token_key">tumblr_access_token_key</string>
+    <string name="tumblr_id_key">tumblr_id_key</string>
 
     <string name="delete">delete</string>
     <!-- TODO: Remove or change this placeholder text -->

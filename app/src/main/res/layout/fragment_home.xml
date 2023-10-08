@@ -32,6 +32,31 @@
             tools:ignore="HardcodedText" />
 
         <TextView
+            android:id="@+id/text_connect_tumblr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="Connect Tumblr"
+            android:textSize="20sp"
+            tools:ignore="HardcodedText" />
+
+        <Button
+            android:id="@+id/button_connect_tumblr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="connect"
+            tools:ignore="HardcodedText" />
+
+        <Button
+            android:id="@+id/youtube_test"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/red"
+            android:text="TEST YOUTUBE API"
+            tools:ignore="HardcodedText" />
+
+        <TextView
             android:id="@+id/text_account_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

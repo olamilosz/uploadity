@@ -28,5 +28,5 @@ interface LinkedinBaseApiInterface {
         @Header("Authorization") authorization: String,
         @Path(value = "uploadImageUrl") uploadImageUrl: String,
         @Part image: MultipartBody.Part
-    ): Call <ResponseBody>
+    ): Call<ResponseBody>
 }

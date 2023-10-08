@@ -5,6 +5,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
@@ -18,6 +19,13 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.gson.JsonObject
 import com.uploadity.api.linkedin.LinkedinApiInterface
 import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
+import com.uploadity.api.linkedin.datamodels.Content
+import com.uploadity.api.linkedin.datamodels.CreatePostParams
+import com.uploadity.api.linkedin.datamodels.Distribution
+import com.uploadity.api.linkedin.datamodels.Media
+import com.uploadity.api.tumblr.TumblrApiInterface
+import com.uploadity.api.tumblr.TumblrApiServiceBuilder
+import com.uploadity.api.tumblr.datamodels.TumblrCreatePostParams
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
@@ -25,7 +33,6 @@ import com.uploadity.tools.UserDataStore
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -36,6 +43,7 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -145,6 +153,16 @@ class NewPostActivity : AppCompatActivity() {
                 Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
             }
         }
+
+        binding.publishTumblrButton.setOnClickListener {
+            if (isMediaSelected) {
+                Log.d("publish", "publish tumblr button clicked")
+                publishTumblrPost()
+
+            } else {
+                Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun deletePost(post: Post) {
@@ -166,8 +184,69 @@ class NewPostActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    private fun publishTumblrPost() {
+        //TODO: dodawanie zdjęcia na blog / wszystkie blogi?????????????????
+        // może tylko pierwszy dla testu
+
+        var accessToken = ""
+
+        runBlocking {
+            accessToken = getStringPreference(getString(R.string.tumblr_access_token_key))
+        }
+
+        //poki co olewamy cale to PostAccount, tylko testujemy pierwszy z brzegu blog plus accesstoken
+        //bo i tak mamy tylko jedno konto tumblr i niepotrzebny nam właściciel bloga
+
+        val blog = appDao.blogDao().getFirstBlog()
+
+        if (blog != null && accessToken.isNotEmpty()) {
+            val tumblrApi = TumblrApiServiceBuilder.buildService(TumblrApiInterface::class.java)
+
+            //image to base64
+            if (Build.VERSION.SDK_INT > 28) {
+                val source = ImageDecoder.createSource(contentResolver, mediaUri)
+                val bitmap = ImageDecoder.decodeBitmap(source)
+                val baos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+                val byteArray = baos.toByteArray()
+                val string = Base64.encodeToString(byteArray, Base64.DEFAULT)
+
+                //Log.d("image BASE64", string)
+/*
+                val body = JsonObject()
+                //body.add("initializeUploadRequest", owner)
+                val mediaType = "application/json".toMediaType()*/
+
+
+                tumblrApi.createPost(
+                    authorization = "Bearer $accessToken",
+                    blogIdentifier = blog.uuid,
+                    requestBody = TumblrCreatePostParams(
+                        "photo",
+                        binding.descriptionEditText.text.toString(),
+                        string
+                    )
+                ).enqueue(object: Callback<ResponseBody> {
+                    override fun onResponse(
+                        call: Call<ResponseBody>,
+                        response: Response<ResponseBody>
+                    ) {
+                        //Log.d("tumblr image code", response.code().toString())
+                        //Log.d("tumblr image msg", response.message())
+                    }
+
+                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                        Log.e("tumblr image failure", t.message.toString())
+                    }
+                })
+
+            } else {
+                //TODO: zrobić wersję dla niższego SDK
+            }
+        }
+    }
+
     private fun initializeUpload() {
-        //TODO datastore get accesstoken i id
         var accessToken = ""
         var userId = ""
 
@@ -200,10 +279,11 @@ class NewPostActivity : AppCompatActivity() {
                     val responseModel = response.body()?.string()
                     val jsonObject = JSONObject(responseModel ?: "")
                     val uploadUrl = JSONObject(jsonObject["value"].toString())["uploadUrl"].toString()
+                    val imageId = JSONObject(jsonObject["value"].toString())["image"].toString()
                     Log.d("initializeUpload", "onResponse value: $uploadUrl")
 
                     if (responseModel != null && mediaUri.toString().isNotEmpty()) {
-                        uploadPicture(uploadUrl)
+                        uploadPicture(uploadUrl, imageId)
 
                     } else {
                         Log.e("initializeImageUpload", "Couldn't extract uploadUrl value")
@@ -217,33 +297,26 @@ class NewPostActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadPicture(uploadUrl: String) {
+    private fun uploadPicture(uploadUrl: String, imageId: String) {
         val client = OkHttpClient()
-
-        //TODO: zrobic zeby w media uri zostawaly dwa x / a nie recznie to poprawiac
-        val mediaPath = mediaUri.toString()
-        val imageType = mediaPath.substring(mediaPath.lastIndexOf(".") + 1)
-        var userId = ""
-        Log.e("uploadPicture path", mediaPath)
-        val file = File(mediaPath)
+        val file = createImageFile()
+        var accessToken = ""
 
         runBlocking {
-            userId = getStringPreference(getString(R.string.linkedin_id_key))
+            accessToken = getStringPreference(getString(R.string.linkedin_access_token_key))
         }
 
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("image", "filename",
-                file.asRequestBody("image/$imageType".toMediaTypeOrNull()))
-            .build()
-
         val request = Request.Builder()
-            .header("Authorization", "Bearer $userId")
+            .header("Authorization", "Bearer $accessToken")
             .url(uploadUrl)
-            .post(requestBody)
+            .put(file.asRequestBody("image/png".toMediaTypeOrNull()))
             .build()
 
         Log.e("uploadPicture request", request.body.toString())
+        Log.e("uploadPicture request", request.method)
+        Log.e("uploadPicture request", request.url.toString())
+        Log.e("uploadPicture request", request.headers.name(0))
+        Log.e("uploadPicture request", request.header("Authorization").toString())
 
         client.newCall(request).enqueue(object: okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
@@ -251,9 +324,63 @@ class NewPostActivity : AppCompatActivity() {
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                Log.d("uploadPicture onResponse", "onResponse ${response.body.string()}")
+                Log.d("uploadPicture onResponse", "code ${response.code}")
+                Log.d("uploadPicture onResponse", "headers ${response.headers}")
+
+                publishPost(imageId, accessToken)
             }
         })
+    }
+
+    private fun publishPost(imageId: String, accessToken: String) {
+        var userId = ""
+        val description = binding.descriptionEditText.text.toString()
+        val title = binding.titleEditText.toString()
+        val linkedinApi = LinkedinApiServiceBuilder.buildService(LinkedinApiInterface::class.java)
+
+        runBlocking {
+            userId = getStringPreference(getString(R.string.linkedin_id_key))
+        }
+
+        if (userId != "") {
+            linkedinApi.createPost(
+                accessToken,
+                CreatePostParams(
+                    "urn:li:person:$userId",
+                    description,
+                    "PUBLIC",
+                    distribution = Distribution(
+                        "MAIN_FEED",
+                        emptyArray(),
+                        emptyArray()
+                    ),
+                    content = Content(
+                        media = Media(
+                            title,
+                            imageId
+                        )
+                    ),
+                    "PUBLISHED",
+                    false
+                )
+            ).enqueue(object: Callback<ResponseBody> {
+                override fun onResponse(
+                    call: Call<ResponseBody>,
+                    response: Response<ResponseBody>
+                ) {
+                    Log.d("publishPost onResponse", "code ${response.code()}")
+                    Log.d("publishPost onResponse", "headers ${response.headers()}")
+
+                    post.isPublished = true
+                    appDao.postDao().update(post)
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    Log.e("publishPost onFailure", t.message.toString())
+                    Log.e("publishPost onFailure", t.cause.toString())
+                }
+            })
+        }
     }
 
     private fun loadPost(postId: Int) {
@@ -290,21 +417,38 @@ class NewPostActivity : AppCompatActivity() {
                 videoView.start()
             }
         }
+    }
 
-        //TODO: to jest funkcja load post a nie publish - do uporządkowania
+    private fun createImageFile(): File {
+        val file = File(applicationContext.filesDir, "post_${post.id}.png")
 
-        /*if (!post.isPublished) {
-            binding.publishButton.visibility = View.VISIBLE
-            binding.publishButton.setOnClickListener {
-                //TODO OPUBLIKOWAĆ POSTA!!!!!!!!!!!!!!! póki co tylko linkedin jeśli jest połączony
-                //TODO jeśli mamy access token i jeśli publikacja posta jest ok to wtedy dopiero update posta dao
+        if (isMediaSelected && wasMediaChanged) {
+            if (!file.exists()) {
+                file.createNewFile()
 
+                if (Build.VERSION.SDK_INT > 28) {
+                    val source = ImageDecoder.createSource(contentResolver, mediaUri)
+                    val bitmap = ImageDecoder.decodeBitmap(source)
+                    val fileOutputStream = FileOutputStream(file)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream)
+                    fileOutputStream.flush()
+                    fileOutputStream.close()
 
-                post.isPublished = true
-                appDao.postDao().update(post)
-                finish()
+                    Log.d(
+                        "createImageFile FILE",
+                        "update post, mediachanged true file name: ${file.name} path: ${file.absolutePath}"
+                    )
+
+                } else {
+                    //TODO: zrobić wersję dla niższego SDK
+                }
+
+                val mediaUri = file.toURI().toString()
+                post.mediaUri = mediaUri
             }
-        }*/
+        }
+
+        return file
     }
 
     private fun savePost() {
@@ -320,7 +464,6 @@ class NewPostActivity : AppCompatActivity() {
                         file.createNewFile()
                     }
 
-                    //TODO: zrobić wersję dla niższego SDK
                     if (Build.VERSION.SDK_INT > 28) {
                         val source = ImageDecoder.createSource(contentResolver, mediaUri)
                         val bitmap = ImageDecoder.decodeBitmap(source)
@@ -331,6 +474,9 @@ class NewPostActivity : AppCompatActivity() {
 
                         Log.d("savePost FILE",
                             "update post, mediachanged true file name: ${file.name} path: ${file.absolutePath}")
+
+                    } else {
+                        //TODO: zrobić wersję dla niższego SDK
                     }
 
                     val mediaUri = file.toURI().toString()
@@ -353,8 +499,6 @@ class NewPostActivity : AppCompatActivity() {
                 )
 
                 val postId = appDao.postDao().insertAndGetId(post)
-
-                //stworzenie pliku ze zdjeciem w lokalizacji aplikacji
                 val file = File(applicationContext.filesDir, "post_$postId.png")
 
                 if (!file.exists()) {
@@ -362,6 +506,7 @@ class NewPostActivity : AppCompatActivity() {
                 }
 
                 if (Build.VERSION.SDK_INT > 28) {
+                    //TODO: posprzatac i umozliwic dla wszystkich platform, wyobrabnic do image tools
                     val source = ImageDecoder.createSource(contentResolver, mediaUri)
                     val bitmap = ImageDecoder.decodeBitmap(source)
                     val fileOutputStream = FileOutputStream(file)

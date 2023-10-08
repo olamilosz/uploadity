@@ -3,11 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
     id 'kotlin-kapt'
+    id 'com.google.dagger.hilt.android'
 }
 
 def localPropertiesFile = rootProject.file("local.properties")
-def localProperties = new Properties()
-localProperties.load(new FileInputStream(localPropertiesFile))
+
 
 android {
     namespace 'com.uploadity'
@@ -21,6 +21,14 @@ android {
         versionName '1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+
+        buildConfigField "String", "LINKEDIN_CLIENT_ID", properties.getProperty("LINKEDIN_CLIENT_ID")
+        buildConfigField "String", "LINKEDIN_CLIENT_SECRET", properties.getProperty("LINKEDIN_CLIENT_SECRET")
+        buildConfigField "String", "TUMBLR_CLIENT_ID", properties.getProperty("TUMBLR_CLIENT_ID")
+        buildConfigField "String", "TUMBLR_CLIENT_SECRET", properties.getProperty("TUMBLR_CLIENT_SECRET")
     }
 
     buildTypes {
@@ -28,16 +36,12 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
-            buildConfigField "String", "LINKEDIN_CLIENT_ID", localProperties['LINKEDIN_CLIENT_ID']
-            buildConfigField "String", "LINKEDIN_CLIENT_SECRET", localProperties['LINKEDIN_CLIENT_SECRET']
         }
 
         debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
-            buildConfigField "String", "LINKEDIN_CLIENT_ID", localProperties['LINKEDIN_CLIENT_ID']
-            buildConfigField "String", "LINKEDIN_CLIENT_SECRET", localProperties['LINKEDIN_CLIENT_SECRET']
         }
     }
 
@@ -62,23 +66,39 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.room:room-ktx:2.5.2'
     implementation 'androidx.room:room-runtime:2.5.2'
-    kapt 'androidx.room:room-compiler:2.5.2'
+    implementation 'com.google.dagger:hilt-android:2.44'
+    kapt 'com.google.dagger:hilt-compiler:2.44'
+    ksp 'androidx.room:room-compiler:2.5.2'
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.2'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.3'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.7.3'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.4'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.7.4'
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
-    implementation "androidx.datastore:datastore-preferences:1.0.0"
-    implementation "androidx.activity:activity-ktx:1.8.0-rc01"
+    implementation 'androidx.datastore:datastore-preferences:1.0.0'
+    implementation 'androidx.activity:activity-ktx:1.8.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
+    implementation 'pub.devrel:easypermissions:3.0.0'
+    implementation('com.google.api-client:google-api-client-android:1.22.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
+    implementation('com.google.apis:google-api-services-youtube:v3-rev183-1.22.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+
+}
+
+kapt {
+    correctErrorTypes true
 }

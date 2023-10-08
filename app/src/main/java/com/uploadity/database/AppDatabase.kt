@@ -6,10 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.database.accounts.AccountDao
+import com.uploadity.database.blogs.Blog
+import com.uploadity.database.blogs.BlogDao
+import com.uploadity.database.postaccount.PostAccount
+import com.uploadity.database.postaccount.PostAccountDao
 import com.uploadity.database.posts.Post
 import com.uploadity.database.posts.PostDao
 
-@Database(entities = [Post::class, Account::class], version = 4, exportSchema = true)
+@Database(entities = [Post::class, Account::class, Blog::class, PostAccount::class], version = 8, exportSchema = true)
 abstract class AppDatabase : RoomDatabase()  {
     private lateinit var databaseInstance: AppDatabase
 
@@ -29,4 +33,8 @@ abstract class AppDatabase : RoomDatabase()  {
     abstract fun postDao(): PostDao
 
     abstract fun accountDao(): AccountDao
+
+    abstract fun blogDao(): BlogDao
+
+    abstract fun postAccountDao(): PostAccountDao
 }

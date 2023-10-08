@@ -1,6 +1,5 @@
 package com.uploadity
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -12,14 +11,20 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.uploadity.api.linkedin.LinkedinBaseApiInterface
-import com.uploadity.api.linkedin.LinkedinBaseApiServiceBuilder
+import com.google.gson.JsonObject
 import com.uploadity.api.linkedin.LinkedinApiInterface
 import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
+import com.uploadity.api.linkedin.LinkedinBaseApiInterface
+import com.uploadity.api.linkedin.LinkedinBaseApiServiceBuilder
 import com.uploadity.api.linkedin.datamodels.AccessTokenResponseModel
 import com.uploadity.api.linkedin.datamodels.UserInfoResponseModel
+import com.uploadity.api.tumblr.TumblrApiInterface
+import com.uploadity.api.tumblr.TumblrApiServiceBuilder
+import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenParams
+import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenResponse
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
+import com.uploadity.database.blogs.Blog
 import com.uploadity.databinding.ActivityMainBinding
 import com.uploadity.tools.UserDataStore
 import com.uploadity.viewmodels.AccountViewModel
@@ -31,6 +36,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody
+import org.json.JSONException
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -40,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var appDao: AppDatabase
     private val viewModel: AccountViewModel by viewModels()
+    //private val mainViewModel: MainViewModel
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,8 +91,147 @@ class MainActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
+
+                "tumblr" -> {
+                    //TODO: posprzątać i ujednolicić kod
+                    val code = appLinkData.getQueryParameter("code") ?: ""
+
+                    if (code != "") {
+                        Log.d("TUMBLR CODE", code)
+
+                        Snackbar.make(
+                            binding.root,
+                            "Tumblr success",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+
+                        GlobalScope.launch {
+                            getTumblrAccessToken(code)
+                        }
+
+                    } else {
+                        Snackbar.make(
+                            binding.root,
+                            "Tumblr cancelled login",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         }
+    }
+
+    private fun getTumblrAccessToken(code: String) {
+        val tumblrApi = TumblrApiServiceBuilder.buildService(TumblrApiInterface::class.java)
+        val clientId = BuildConfig.TUMBLR_CLIENT_ID
+        val clientSecret = BuildConfig.TUMBLR_CLIENT_SECRET
+
+        tumblrApi.getAccessToken(
+            TumblrAccessTokenParams(
+                "authorization_code",
+                code,
+                clientId,
+                clientSecret,
+                "https://uploadity.net.pl/tumblr"
+            )
+        ).enqueue(object: Callback<TumblrAccessTokenResponse> {
+            override fun onResponse(
+                call: Call<TumblrAccessTokenResponse>,
+                response: Response<TumblrAccessTokenResponse>
+            ) {
+                Log.d("TumblrAccessToken onResponse", "code ${response.code()} ${response.message()}")
+
+                Snackbar.make(
+                    binding.root,
+                    "Tumblr access token success",
+                    Snackbar.LENGTH_SHORT
+                ).show()
+
+                val accessToken = response.body()?.accessToken ?: ""
+
+                if (accessToken.isNotEmpty()) {
+                    //TODO datastore access token
+                    runBlocking {
+                        addStringDataStoreValue(getString(R.string.tumblr_access_token_key), accessToken)
+                    }
+
+                    Log.d("tumblrApi access token success", accessToken)
+                    //getTumblrUserInfo(tumblrApi, accessToken)
+                }
+            }
+
+            override fun onFailure(call: Call<TumblrAccessTokenResponse>, t: Throwable) {
+                Log.e("TumblrAccessToken onFailure", "${t.message}")
+            }
+        })
+    }
+
+    private fun getTumblrUserInfo(tumblrApi: TumblrApiInterface, accessToken: String) {
+        tumblrApi.getUserInfo(
+            "Bearer $accessToken"
+        ).enqueue(object: Callback<ResponseBody> {
+            override fun onResponse(
+                call: Call<ResponseBody>,
+                response: Response<ResponseBody>
+            ) {
+                val userInfo = response.body()?.string() ?: ""
+                Log.d("getTumblrUserInfo onResponse", userInfo)
+
+                if (userInfo.isNotEmpty()) {
+                    try {
+                        val userObject = JSONObject(userInfo)
+                            .getJSONObject("response")
+                            .getJSONObject("user")
+
+                        val name = userObject.getString("name")
+                        val account = Account(
+                            0,
+                            "",
+                            name,
+                            "",
+                            "",
+                            "tumblr"
+                        )
+
+                        val accountId = appDao.accountDao().insert(account)
+
+                        val blogs = userObject.getJSONArray("blogs")
+
+                        for (i in 0 until blogs.length()) {
+                            if (!blogs.isNull(i)) {
+                                val blog = blogs.getJSONObject(i)
+                                val isAdmin = blog.getBoolean("admin")
+
+                                if (isAdmin) {
+                                    val blogName = blog.getString("name")
+                                    val blogTitle = blog.getString("title")
+                                    val blogUrl = blog.getString("url")
+                                    val blogUuid = blog.getString("uuid")
+
+                                    appDao.blogDao().insert(
+                                        Blog(
+                                            0,
+                                            accountId.toInt(),
+                                            blogName,
+                                            blogTitle,
+                                            blogUrl,
+                                            blogUuid
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                    } catch (e: JSONException) {
+                        Log.e("getTumblrUserInfo", "JSONException ${e.message}")
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("getTumblrUserInfo onFailure", t.message.toString())
+            }
+        })
     }
 
     private fun getAccessToken(code: String) {
@@ -109,20 +257,13 @@ class MainActivity : AppCompatActivity() {
                 val accessToken = response.body()?.accessToken ?: ""
 
                 if (accessToken.isNotEmpty()) {
-                    /*val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
-                    with (sharedPreferences.edit()) {
-                        putString(getString(R.string.linkedin_access_token_key), accessToken)
-                        apply()
-                    }*/
-
                     //TODO datastore access token
-
                     runBlocking {
                         addStringDataStoreValue(getString(R.string.linkedin_access_token_key), accessToken)
                     }
 
                     Log.d("access token success", accessToken)
-                    getLinkedinUserInfo()
+                    getLinkedinUserInfo(accessToken)
                 }
             }
 
@@ -138,9 +279,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun getLinkedinUserInfo() {
-        val sharedPreferences = this@MainActivity.getPreferences(Context.MODE_PRIVATE) ?: return
-        val accessToken = sharedPreferences.getString(getString(R.string.linkedin_access_token_key), "")
+    private fun getLinkedinUserInfo(accessToken: String) {
         val linkedinApi = LinkedinApiServiceBuilder.buildService(LinkedinApiInterface::class.java)
 
         if (accessToken != "") {
@@ -154,13 +293,6 @@ class MainActivity : AppCompatActivity() {
                     val userInfo = response.body()
 
                     if (userInfo != null) {
-                        /*with (sharedPreferences.edit()) {
-                            putString(getString(R.string.linkedin_id_key), userInfo.id)
-                            apply()
-                        }*/
-
-                        //TODO datastore id
-
                         runBlocking {
                             addStringDataStoreValue(getString(R.string.linkedin_id_key), userInfo.id)
                         }

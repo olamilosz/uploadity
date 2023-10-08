@@ -10,22 +10,22 @@ import android.view.ViewGroup
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.util.ExponentialBackOff
+import com.google.api.services.youtube.YouTubeScopes
 import com.uploadity.AccountActivity
-import com.uploadity.NewPostActivity
+import com.uploadity.BuildConfig
 import com.uploadity.R
 import com.uploadity.api.linkedin.LinkedinApiTools
+import com.uploadity.api.tumblr.tools.TumblrApiTools
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.FragmentHomeBinding
 import com.uploadity.ui.uicomponents.AccountItemListAdapter
-import com.uploadity.ui.uicomponents.PostItemListAdapter
 import com.uploadity.viewmodels.AccountViewModel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
@@ -34,6 +34,7 @@ class HomeFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var accountItemListAdapter: AccountItemListAdapter
     private lateinit var appDao: AppDatabase
+    private lateinit var mCredential: GoogleAccountCredential
 
     private val binding get() = _binding!!
 
@@ -48,8 +49,16 @@ class HomeFragment : Fragment() {
         val accountListView = binding.accountList
 
         connectButton.setOnClickListener {
-            val clientId = getString(R.string.LINKEDIN_CLIENT_ID)
+            val clientId = BuildConfig.LINKEDIN_CLIENT_ID
             val authorizationUrl = LinkedinApiTools().generateAuthorizationUrl(clientId)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
+            startActivity(intent)
+        }
+
+        val connectTumblrButton = binding.buttonConnectTumblr
+        connectTumblrButton.setOnClickListener {
+            val clientId = BuildConfig.TUMBLR_CLIENT_ID
+            val authorizationUrl = TumblrApiTools().generateAuthorizationUrl(clientId)
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
             startActivity(intent)
         }
@@ -77,13 +86,18 @@ class HomeFragment : Fragment() {
                 ?.let { this.setDrawable(it) }
         })
 
-        //accountList.observe(viewLifecycleOwner, Observer {
-        //   Log.d("Home Fragment", "Observer account list: ${it.toString()}")
-        //})
+        val youtubeTestButton = binding.youtubeTest
+        youtubeTestButton.setOnClickListener {
+            Log.d("click", "youtube test button")
+            //getResultsFromApi()
+        }
+
+        val scopes = mutableListOf<String>(YouTubeScopes.YOUTUBE_UPLOAD)
+        mCredential = GoogleAccountCredential.usingOAuth2(activity, scopes)
+            .setBackOff(ExponentialBackOff())
 
         return root
     }
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

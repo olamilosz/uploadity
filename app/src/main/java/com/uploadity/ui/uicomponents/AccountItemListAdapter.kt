@@ -11,8 +11,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.R
 import com.uploadity.database.accounts.Account
@@ -55,8 +53,14 @@ class AccountItemListAdapter(private val dataSet: List<Account>) :
         val account = dataSet[position]
         holder.textView.text = account.name
 
-        if (account.socialMediaServiceName == "linkedin") {
-            holder.imageView.setImageDrawable(context.getDrawable(R.drawable.linkedin_icon))
+        when (account.socialMediaServiceName) {
+            "linkedin" -> {
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.linkedin_icon))
+            }
+
+            "tumblr" -> {
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.tumblr_icon))
+            }
         }
 
         holder.rowItem.setOnClickListener {
