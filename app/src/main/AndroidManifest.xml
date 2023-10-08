@@ -96,10 +96,19 @@
                 <data android:host="uploadity.net.pl" />
                 <data android:pathPrefix="/tumblr" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="uploadity.net.pl" />
+                <data android:pathPrefix="/twitter" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".NewPostActivity"
             android:exported="true" />
     </application>
-
 </manifest>

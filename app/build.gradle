@@ -29,6 +29,8 @@ android {
         buildConfigField "String", "LINKEDIN_CLIENT_SECRET", properties.getProperty("LINKEDIN_CLIENT_SECRET")
         buildConfigField "String", "TUMBLR_CLIENT_ID", properties.getProperty("TUMBLR_CLIENT_ID")
         buildConfigField "String", "TUMBLR_CLIENT_SECRET", properties.getProperty("TUMBLR_CLIENT_SECRET")
+        buildConfigField "String", "TWITTER_CLIENT_ID", properties.getProperty("TWITTER_CLIENT_ID")
+        buildConfigField "String", "TWITTER_CLIENT_SECRET", properties.getProperty("TWITTER_CLIENT_SECRET")
     }
 
     buildTypes {
@@ -61,6 +63,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.9.9'
     apply plugin: 'kotlin-kapt'
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.core:core-ktx:1.12.0'
@@ -87,15 +90,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    implementation 'com.google.android.gms:play-services-auth:20.7.0'
-    implementation 'pub.devrel:easypermissions:3.0.0'
-    implementation('com.google.api-client:google-api-client-android:1.22.0') {
-        exclude group: 'org.apache.httpcomponents'
-    }
-    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
-    implementation('com.google.apis:google-api-services-youtube:v3-rev183-1.22.0') {
-        exclude group: 'org.apache.httpcomponents'
-    }
+    implementation 'commons-codec:commons-codec:1.15'
 
 }
 

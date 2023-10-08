@@ -27,7 +27,7 @@
             android:id="@+id/button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="10dp"
             android:text="connect"
             tools:ignore="HardcodedText" />
 
@@ -47,13 +47,21 @@
             android:text="connect"
             tools:ignore="HardcodedText" />
 
+        <TextView
+            android:id="@+id/text_connect_twitter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="Connect Twitter"
+            android:textSize="20sp"
+            tools:ignore="HardcodedText" />
+
         <Button
-            android:id="@+id/youtube_test"
+            android:id="@+id/button_connect_twitter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
-            android:backgroundTint="@color/red"
-            android:text="TEST YOUTUBE API"
+            android:layout_marginBottom="10dp"
+            android:text="connect"
             tools:ignore="HardcodedText" />
 
         <TextView

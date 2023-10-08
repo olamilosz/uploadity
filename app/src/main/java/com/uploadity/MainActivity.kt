@@ -117,6 +117,10 @@ class MainActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
+
+                "twitter" -> {
+                    //TODO: DOKONCZYC TWITTER
+                }
             }
         }
     }

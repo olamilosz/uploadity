@@ -2,30 +2,38 @@ package com.uploadity.ui.home
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
-import com.google.api.client.util.ExponentialBackOff
-import com.google.api.services.youtube.YouTubeScopes
 import com.uploadity.AccountActivity
 import com.uploadity.BuildConfig
 import com.uploadity.R
 import com.uploadity.api.linkedin.LinkedinApiTools
 import com.uploadity.api.tumblr.tools.TumblrApiTools
+import com.uploadity.api.twitter.TwitterApiInterface
+import com.uploadity.api.twitter.TwitterApiServiceBuilder
+import com.uploadity.api.twitter.datamodels.TwitterRequestTokenResponse
+import com.uploadity.api.twitter.tools.TwitterApiTools
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.FragmentHomeBinding
 import com.uploadity.ui.uicomponents.AccountItemListAdapter
 import com.uploadity.viewmodels.AccountViewModel
+import okhttp3.ResponseBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.net.URLEncoder
 
 class HomeFragment : Fragment() {
 
@@ -34,10 +42,10 @@ class HomeFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var accountItemListAdapter: AccountItemListAdapter
     private lateinit var appDao: AppDatabase
-    private lateinit var mCredential: GoogleAccountCredential
 
     private val binding get() = _binding!!
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -63,6 +71,11 @@ class HomeFragment : Fragment() {
             startActivity(intent)
         }
 
+        val connectTwitterButton = binding.buttonConnectTwitter
+        connectTwitterButton.setOnClickListener {
+            requestTwitterToken()
+        }
+
         appDao = context?.let { AppDatabase.getInstance(it) }!!
         val accountList = appDao.accountDao().getAllAccounts()
         Log.d("Home Fragment", "Account list: ${accountList.toString()}")
@@ -86,18 +99,67 @@ class HomeFragment : Fragment() {
                 ?.let { this.setDrawable(it) }
         })
 
-        val youtubeTestButton = binding.youtubeTest
-        youtubeTestButton.setOnClickListener {
-            Log.d("click", "youtube test button")
-            //getResultsFromApi()
-        }
-
-        val scopes = mutableListOf<String>(YouTubeScopes.YOUTUBE_UPLOAD)
-        mCredential = GoogleAccountCredential.usingOAuth2(activity, scopes)
-            .setBackOff(ExponentialBackOff())
-
         return root
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun requestTwitterToken() {
+        val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
+        val callbackUrl = "https://uploadity.net.pl/twitter"
+        val encodedCallbackUrl = URLEncoder.encode(callbackUrl, "UTF-8")
+        //val authorizationParameterMap
+
+        val authorizationHeader = TwitterApiTools()
+            .generateRequestTokenAuthorizationHeader(encodedCallbackUrl)
+
+        Log.d("authorizationHeader", authorizationHeader)
+
+        twitterApi.requestToken(
+            authorizationHeader,
+            callbackUrl
+
+        ).enqueue(object: Callback<ResponseBody> {
+            override fun onResponse(
+                call: Call<ResponseBody>,
+                response: Response<ResponseBody>
+            ) {
+                val responseBody = response.body()
+
+                if (responseBody != null) {
+                    val responseParameterList = responseBody.string().split("&")
+                    val responseParameterMap = mutableMapOf<String, String>()
+
+                    for (parameter in responseParameterList) {
+                        responseParameterMap[parameter.substringBefore("=").trim()] =
+                            parameter.substringAfter("=").trim()
+                    }
+
+                    if (responseParameterMap["oauth_callback_confirmed"] == "true") {
+                        val oauthToken = responseParameterMap["oauth_token"] ?: ""
+
+                        if (oauthToken.isNotEmpty()) {
+                            authorizeTwitter(oauthToken)
+                        }
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("requestToken", "onFailure code ${t.message}")
+            }
+
+        })
+    }
+
+    fun authorizeTwitter(oauthToken: String) {
+        val browserIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://api.twitter.com/oauth/authorize?oauth_token=$oauthToken")
+        )
+
+        startActivity(browserIntent)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
