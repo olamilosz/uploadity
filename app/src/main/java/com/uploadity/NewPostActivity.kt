@@ -13,6 +13,7 @@ import android.widget.MediaController
 import android.widget.TextView
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
@@ -26,6 +27,13 @@ import com.uploadity.api.linkedin.datamodels.Media
 import com.uploadity.api.tumblr.TumblrApiInterface
 import com.uploadity.api.tumblr.TumblrApiServiceBuilder
 import com.uploadity.api.tumblr.datamodels.TumblrCreatePostParams
+import com.uploadity.api.twitter.TwitterApiInterface
+import com.uploadity.api.twitter.TwitterApiServiceBuilder
+import com.uploadity.api.twitter.datamodels.CreateTwitterPostParams
+import com.uploadity.api.twitter.datamodels.MediaObject
+import com.uploadity.api.twitter.media.TwitterMediaApiInterface
+import com.uploadity.api.twitter.media.TwitterMediaApiServiceBuilder
+import com.uploadity.api.twitter.tools.TwitterApiTools
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
@@ -33,12 +41,16 @@ import com.uploadity.tools.UserDataStore
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
 import okio.IOException
+import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -58,6 +70,7 @@ class NewPostActivity : AppCompatActivity() {
     private var isInEditMode = false
     private var wasMediaChanged = false
 
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appDao = AppDatabase.getInstance(this)
@@ -163,6 +176,114 @@ class NewPostActivity : AppCompatActivity() {
                 Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
             }
         }
+
+        binding.publishTwitterButton.setOnClickListener {
+            if (isMediaSelected) {
+                Log.d("publish", "twitter publish button clicked")
+                publishTwitterPost()
+
+            } else {
+                Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun publishTwitterPost() {
+        val parameterMap = mutableMapOf<String, String>()
+        var accessToken = ""
+        var accessTokenSecret = ""
+
+        runBlocking {
+            accessToken = getStringPreference(getString(R.string.twitter_access_token_key))
+        }
+
+        runBlocking {
+            accessTokenSecret = getStringPreference(getString(R.string.twitter_access_token_secret_key))
+        }
+
+        if (accessToken.isNotEmpty() && accessTokenSecret.isNotEmpty()) {
+            parameterMap["oauth_token"] = accessToken
+            parameterMap["media_category"] = "tweet_image"
+
+            Log.d("publishTwitterPost", "parameterMap: $parameterMap")
+
+            val authorizationHeader = TwitterApiTools().generateAuthorizationHeader(
+                "https://upload.twitter.com/1.1/media/upload.json",
+                parameterMap, accessTokenSecret)
+
+            val file = createImageFile()
+            val client = OkHttpClient()
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("media", file.name, file.asRequestBody("application/octet-stream".toMediaType()))
+                .build()
+            val request = Request.Builder()
+                .url("https://upload.twitter.com/1.1/media/upload.json?media_category=tweet_image")
+                .post(requestBody)
+                .addHeader("Authorization", authorizationHeader)
+                .build()
+
+            client.newCall(request).enqueue(object: okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    Log.e("twitter image failure", e.message.toString())
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    val body = response.body.string()
+                    Log.d("twitter upload", "response $response")
+                    Log.d("twitter upload", "response $body")
+
+                    if (response.code == 200) {
+                        try {
+                            val jsonObject = JSONObject(body)
+                            val mediaId = jsonObject.getString("media_id_string")
+
+                            if (mediaId.isNotEmpty()) {
+                                Log.d("media ID", "media ID: $mediaId")
+                                createTwitterPost(mediaId, accessToken, accessTokenSecret)
+                            }
+
+                        } catch (e: JSONException) {
+                            Log.e("JSONException", "uploadingMedia ${e.message}")
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createTwitterPost(mediaId: String, accessToken: String, accessTokenSecret: String) {
+        val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
+        val parameterMap = mutableMapOf<String, String>()
+        parameterMap["oauth_token"] = accessToken
+        val authorizationHeader = TwitterApiTools().generateAuthorizationHeader(
+            "https://api.twitter.com/2/tweets",
+            parameterMap,
+            accessTokenSecret
+        )
+
+        twitterApi.createTwitterPost(
+            authorizationHeader,
+            CreateTwitterPostParams(
+                "test1",
+                MediaObject(arrayOf(mediaId))
+            )
+
+        ).enqueue(object: Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                val responseBody = response.body()
+
+                if (responseBody != null) {
+                    Log.d("twitter post response", "response ${responseBody.string()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("twitter post failure", t.message.toString())
+            }
+        })
     }
 
     private fun deletePost(post: Post) {

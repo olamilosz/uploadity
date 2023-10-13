@@ -1,7 +1,6 @@
 package com.uploadity.database.accounts
 
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -13,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 interface AccountDao {
     @Query("SELECT * FROM accounts")
     fun getAllAccounts(): List<Account>
+
+    @Query("SELECT * FROM accounts")
+    fun getAllAccountsLiveData(): LiveData<List<Account>>
 
     @Query("SELECT * FROM accounts")
     fun getAllAccountsFlow(): Flow<List<Account>>

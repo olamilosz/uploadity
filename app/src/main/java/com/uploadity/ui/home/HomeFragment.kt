@@ -12,23 +12,27 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.AccountActivity
 import com.uploadity.BuildConfig
 import com.uploadity.R
+import com.uploadity.UploadityApplication
 import com.uploadity.api.linkedin.LinkedinApiTools
 import com.uploadity.api.tumblr.tools.TumblrApiTools
 import com.uploadity.api.twitter.TwitterApiInterface
 import com.uploadity.api.twitter.TwitterApiServiceBuilder
-import com.uploadity.api.twitter.datamodels.TwitterRequestTokenResponse
 import com.uploadity.api.twitter.tools.TwitterApiTools
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.FragmentHomeBinding
 import com.uploadity.ui.uicomponents.AccountItemListAdapter
 import com.uploadity.viewmodels.AccountViewModel
+import com.uploadity.viewmodels.AccountViewModelFactory
+import kotlinx.coroutines.flow.collect
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
@@ -38,12 +42,13 @@ import java.net.URLEncoder
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
-    private val viewModel: AccountViewModel by activityViewModels()
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var accountItemListAdapter: AccountItemListAdapter
-    private lateinit var appDao: AppDatabase
-
     private val binding get() = _binding!!
+
+    private val accountViewModel: AccountViewModel by activityViewModels {
+        AccountViewModelFactory(
+            (activity?.application as UploadityApplication).database.accountDao()
+        )
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
@@ -54,7 +59,6 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
         val connectButton = binding.button
-        val accountListView = binding.accountList
 
         connectButton.setOnClickListener {
             val clientId = BuildConfig.LINKEDIN_CLIENT_ID
@@ -76,13 +80,20 @@ class HomeFragment : Fragment() {
             requestTwitterToken()
         }
 
-        appDao = context?.let { AppDatabase.getInstance(it) }!!
-        val accountList = appDao.accountDao().getAllAccounts()
-        Log.d("Home Fragment", "Account list: ${accountList.toString()}")
+        val recyclerView = binding.accountList
+        val accountItemListAdapter = AccountItemListAdapter()
 
-        recyclerView = accountListView
+        recyclerView.adapter = accountItemListAdapter
         recyclerView.layoutManager = LinearLayoutManager(activity)
-        accountItemListAdapter = AccountItemListAdapter(accountList)
+        recyclerView.addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL).apply {
+            AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
+                ?.let { this.setDrawable(it) }
+        })
+
+        accountViewModel.getAllAccounts.observe(viewLifecycleOwner) { accounts ->
+            accounts.let { accountItemListAdapter.submitList(it) }
+        }
+
         accountItemListAdapter.setOnClickListener(object : AccountItemListAdapter.OnClickListener {
             override fun onClick(position: Int, account: Account) {
                 Log.d("account item click", "ON CLICK: id ${account.id}")
@@ -93,12 +104,6 @@ class HomeFragment : Fragment() {
             }
         })
 
-        recyclerView.adapter = accountItemListAdapter
-        recyclerView.addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL).apply {
-            AppCompatResources.getDrawable(requireContext(), R.drawable.margin_vertical_20dp)
-                ?.let { this.setDrawable(it) }
-        })
-
         return root
     }
 
@@ -106,11 +111,9 @@ class HomeFragment : Fragment() {
     private fun requestTwitterToken() {
         val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
         val callbackUrl = "https://uploadity.net.pl/twitter"
-        val encodedCallbackUrl = URLEncoder.encode(callbackUrl, "UTF-8")
-        //val authorizationParameterMap
 
         val authorizationHeader = TwitterApiTools()
-            .generateRequestTokenAuthorizationHeader(encodedCallbackUrl)
+            .generateRequestTokenAuthorizationHeader(callbackUrl)
 
         Log.d("authorizationHeader", authorizationHeader)
 
@@ -147,7 +150,6 @@ class HomeFragment : Fragment() {
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                 Log.e("requestToken", "onFailure code ${t.message}")
             }
-
         })
     }
 

@@ -50,6 +50,7 @@ class AccountActivity : AppCompatActivity() {
                 "linkedin" -> {
                     binding.account.text = "Linkedin"
                 }
+
                 "tumblr" -> {
                     binding.account.text = "Tumblr"
                     binding.email.visibility = View.GONE
@@ -77,6 +78,10 @@ class AccountActivity : AppCompatActivity() {
                             ) ?.let { this.setDrawable(it) }
                         })
                     }
+                }
+
+                "twitter" -> {
+                    binding.account.text = "Twitter"
                 }
             }
         }

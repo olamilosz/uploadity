@@ -2,7 +2,6 @@ package com.uploadity.ui.uicomponents
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
@@ -11,17 +10,20 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
+import androidx.core.view.setPadding
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.R
 import com.uploadity.database.accounts.Account
 
-class AccountItemListAdapter(private val dataSet: List<Account>) :
-    RecyclerView.Adapter<AccountItemListAdapter.ViewHolder>() {
+class AccountItemListAdapter : ListAdapter<Account, AccountItemListAdapter.AccountViewHolder>(AccountComparator()) {
 
     private var onClickListener: OnClickListener? = null
     private lateinit var context: Context
 
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    class AccountViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textView: TextView
         val imageView: ImageView
         val rowItem: LinearLayout
@@ -33,24 +35,29 @@ class AccountItemListAdapter(private val dataSet: List<Account>) :
         }
     }
 
-    override fun onCreateViewHolder(
-        parent: ViewGroup,
-        viewType: Int
-    ): ViewHolder {
+    class AccountComparator: DiffUtil.ItemCallback<Account>() {
+        override fun areItemsTheSame(oldItem: Account, newItem: Account): Boolean {
+            return oldItem === newItem
+        }
+
+        override fun areContentsTheSame(oldItem: Account, newItem: Account): Boolean {
+            return oldItem.id == newItem.id
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AccountViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.post_item_list_adapter, parent, false)
 
         context = parent.context
 
-        return ViewHolder(view)
+        return AccountViewHolder(view)
     }
-
-    override fun getItemCount() = dataSet.size
 
     @SuppressLint("UseCompatLoadingForDrawables")
     @RequiresApi(Build.VERSION_CODES.Q)
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val account = dataSet[position]
+    override fun onBindViewHolder(holder: AccountViewHolder, position: Int) {
+        val account = getItem(position)
         holder.textView.text = account.name
 
         when (account.socialMediaServiceName) {
@@ -60,6 +67,12 @@ class AccountItemListAdapter(private val dataSet: List<Account>) :
 
             "tumblr" -> {
                 holder.imageView.setImageDrawable(context.getDrawable(R.drawable.tumblr_icon))
+            }
+
+            "twitter" -> {
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.twitter_x_icon))
+                holder.imageView.setPadding(12)
+                holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.black))
             }
         }
 

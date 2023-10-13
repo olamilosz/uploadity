@@ -20,6 +20,10 @@
     <string name="tumblr_access_token_key">tumblr_access_token_key</string>
     <string name="tumblr_id_key">tumblr_id_key</string>
 
+    <string name="twitter_access_token_key">twitter_access_token_key</string>
+    <string name="twitter_access_token_secret_key">twitter_access_token_secret_key</string>
+    <string name="twitter_id_key">twitter_id_key</string>
+
     <string name="delete">delete</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

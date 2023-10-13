@@ -2,16 +2,17 @@ package com.uploadity
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.google.gson.JsonObject
 import com.uploadity.api.linkedin.LinkedinApiInterface
 import com.uploadity.api.linkedin.LinkedinApiServiceBuilder
 import com.uploadity.api.linkedin.LinkedinBaseApiInterface
@@ -22,6 +23,8 @@ import com.uploadity.api.tumblr.TumblrApiInterface
 import com.uploadity.api.tumblr.TumblrApiServiceBuilder
 import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenParams
 import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenResponse
+import com.uploadity.api.twitter.TwitterApiInterface
+import com.uploadity.api.twitter.TwitterApiServiceBuilder
 import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.database.blogs.Blog
@@ -48,8 +51,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var appDao: AppDatabase
     private val viewModel: AccountViewModel by viewModels()
-    //private val mainViewModel: MainViewModel
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,10 +122,82 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 "twitter" -> {
-                    //TODO: DOKONCZYC TWITTER
+                    val oauthToken = appLinkData.getQueryParameter("oauth_token") ?: ""
+                    val oauthVerifier = appLinkData.getQueryParameter("oauth_verifier") ?: ""
+
+                    if (oauthToken.isNotEmpty() && oauthVerifier.isNotEmpty()) {
+                        getTwitterAccessToken(oauthToken, oauthVerifier)
+                    }
                 }
             }
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun getTwitterAccessToken(oauthToken: String, oauthVerifier: String) {
+        val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
+        val requestUrl = "https://api.twitter.com/oauth/access_token"
+        val parameterMap = mutableMapOf<String, String>()
+        parameterMap["oauth_token"] = oauthToken
+        parameterMap["oauth_verifier"] = oauthVerifier
+
+        twitterApi.accessToken(
+            oauthToken,
+            oauthVerifier
+
+        ).enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                val responseBody = response.body()
+
+                if (responseBody != null) {
+                    val responseParameterList = responseBody.string().split("&")
+                    val responseParameterMap = mutableMapOf<String, String>()
+
+                    for (parameter in responseParameterList) {
+                        responseParameterMap[parameter.substringBefore("=").trim()] =
+                            parameter.substringAfter("=").trim()
+                    }
+
+                    Log.d("access token twitter", "map: $responseParameterList")
+
+                    val userOauthToken = responseParameterMap["oauth_token"]
+                    val userOauthTokenSecret = responseParameterMap["oauth_token_secret"]
+                    val userId = responseParameterMap["user_id"]
+                    val userName = responseParameterMap["screen_name"]
+
+                    if (userOauthToken != null && userOauthTokenSecret != null && userId != null
+                            && userName != null) {
+
+                        runBlocking {
+                            addStringDataStoreValue(
+                                getString(R.string.twitter_access_token_key), userOauthToken)
+                        }
+
+                        runBlocking {
+                            addStringDataStoreValue(
+                                getString(R.string.twitter_access_token_secret_key), userOauthTokenSecret)
+                        }
+
+                        //TODO: można dodać verify_credentials
+
+                        appDao.accountDao().insert(
+                            Account(
+                                0,
+                                userId,
+                                userName,
+                                "",
+                                "",
+                                "twitter"
+                            )
+                        )
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("access token twitter error", "error: ${t.message}")
+            }
+        })
     }
 
     private fun getTumblrAccessToken(code: String) {
@@ -138,6 +213,7 @@ class MainActivity : AppCompatActivity() {
                 clientSecret,
                 "https://uploadity.net.pl/tumblr"
             )
+
         ).enqueue(object: Callback<TumblrAccessTokenResponse> {
             override fun onResponse(
                 call: Call<TumblrAccessTokenResponse>,
@@ -160,7 +236,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     Log.d("tumblrApi access token success", accessToken)
-                    //getTumblrUserInfo(tumblrApi, accessToken)
+                    getTumblrUserInfo(tumblrApi, accessToken)
                 }
             }
 

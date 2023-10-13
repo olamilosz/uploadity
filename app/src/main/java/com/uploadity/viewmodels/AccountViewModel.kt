@@ -1,16 +1,30 @@
 package com.uploadity.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import com.uploadity.database.AppDatabase
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import com.uploadity.database.accounts.Account
+import com.uploadity.database.accounts.AccountDao
+import kotlinx.coroutines.launch
 
-class AccountViewModel(application: Application) : AndroidViewModel(application) {
-    val accountList = AppDatabase.getInstance(application).accountDao().getAllAccounts()
+class AccountViewModel(private val accountDao: AccountDao): ViewModel() {
 
-    fun <T> MutableLiveData<MutableList<T>>.add(item: T) {
-        val updatedItems = this.value as ArrayList
-        updatedItems.add(item)
-        this.value = updatedItems
+    val getAllAccounts: LiveData<List<Account>> = accountDao.getAllAccountsFlow().asLiveData()
+
+    fun insert(account: Account) = viewModelScope.launch {
+        accountDao.insert(account)
+    }
+}
+
+class AccountViewModelFactory(private val accountDao: AccountDao): ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AccountViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return AccountViewModel(accountDao) as T
+        }
+
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
