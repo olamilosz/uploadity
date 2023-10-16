@@ -9,6 +9,8 @@ import android.view.View
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -31,6 +33,7 @@ import com.uploadity.database.blogs.Blog
 import com.uploadity.databinding.ActivityMainBinding
 import com.uploadity.tools.UserDataStore
 import com.uploadity.viewmodels.AccountViewModel
+import com.uploadity.viewmodels.AccountViewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +53,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var appDao: AppDatabase
-    private val viewModel: AccountViewModel by viewModels()
+    private val accountViewModel: AccountViewModel by viewModels {
+        AccountViewModelFactory((application as UploadityApplication).repository)
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(DelicateCoroutinesApi::class)
@@ -65,19 +70,14 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
         navView.setupWithNavController(navController)
 
-        val fab: View = findViewById(R.id.fab)
-        fab.setOnClickListener {
-            val intent = Intent(this, NewPostActivity::class.java)
-            this.startActivity(intent)
-        }
-
         val appLinkIntent: Intent = intent
         val appLinkData: Uri? = appLinkIntent.data
 
         if (appLinkData != null) {
             when (appLinkData.lastPathSegment) {
                 "linkedin" -> {
-                    val code = appLinkData.getQueryParameter("code") ?: ""
+                    accountViewModel.handleLinkDataFromCallback(appLinkData)
+                    /*val code = appLinkData.getQueryParameter("code") ?: ""
 
                     if (code != "") {
                         Log.d("LINKEDIN CODE", code)
@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                             "Linkedin cancelled login",
                             Snackbar.LENGTH_SHORT
                         ).show()
-                    }
+                    }*/
                 }
 
                 "tumblr" -> {
@@ -130,6 +130,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+
+        accountViewModel.loginStatusMessage.observe(this) { message ->
+            Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
         }
     }
 

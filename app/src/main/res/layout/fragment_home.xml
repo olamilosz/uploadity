@@ -1,81 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/fragment_home"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="40dp"
     tools:context=".ui.home.HomeFragment"
     tools:ignore="RtlHardcoded">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <TextView
-        android:id="@+id/text_home"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="Connect Linkedin"
-        android:textSize="20sp"
-        tools:ignore="HardcodedText" />
-
-        <Button
-            android:id="@+id/button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:text="connect"
-            tools:ignore="HardcodedText" />
-
-        <TextView
-            android:id="@+id/text_connect_tumblr"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:text="Connect Tumblr"
-            android:textSize="20sp"
-            tools:ignore="HardcodedText" />
+            android:orientation="vertical"
+            android:padding="40dp">
 
-        <Button
-            android:id="@+id/button_connect_tumblr"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="connect"
-            tools:ignore="HardcodedText" />
+            <TextView
+                android:id="@+id/text_home"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:text="Add new social media account"
+                android:textSize="20sp"
+                tools:ignore="HardcodedText" />
 
-        <TextView
-            android:id="@+id/text_connect_twitter"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:text="Connect Twitter"
-            android:textSize="20sp"
-            tools:ignore="HardcodedText" />
+            <Button
+                android:id="@+id/button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:backgroundTint="@color/linkedin_blue"
+                android:text="Linkedin"
+                app:icon="@drawable/ic_linkedin"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp"
+                app:iconSize="16dp"
+                tools:ignore="HardcodedText" />
 
-        <Button
-            android:id="@+id/button_connect_twitter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:text="connect"
-            tools:ignore="HardcodedText" />
+            <Button
+                android:id="@+id/button_connect_tumblr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:backgroundTint="@color/tumblr_background"
+                app:icon="@drawable/ic_tumblr"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp"
+                app:iconSize="16dp"
+                android:text="Tumblr"
+                tools:ignore="HardcodedText" />
 
-        <TextView
-            android:id="@+id/text_account_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
-            android:text="Account List"
-            android:textSize="20sp"
-            tools:ignore="HardcodedText" />
+            <Button
+                android:id="@+id/button_connect_twitter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/twitter_background"
+                app:icon="@drawable/ic_twitter"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp"
+                android:layout_marginBottom="20dp"
+                app:iconSize="16dp"
+                android:text="Twitter"
+                tools:ignore="HardcodedText" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/accountList"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            <TextView
+                android:id="@+id/text_social_media_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:text="Account List"
+                android:textSize="20sp"
+                tools:ignore="HardcodedText" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/accountList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
     </LinearLayout>
 </ScrollView>

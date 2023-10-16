@@ -8,12 +8,14 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -43,11 +45,8 @@ class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-
-    private val accountViewModel: AccountViewModel by activityViewModels {
-        AccountViewModelFactory(
-            (activity?.application as UploadityApplication).database.accountDao()
-        )
+    private val accountViewModel: AccountViewModel by viewModels {
+        AccountViewModelFactory((requireActivity().application as UploadityApplication).repository)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -64,6 +63,7 @@ class HomeFragment : Fragment() {
             val clientId = BuildConfig.LINKEDIN_CLIENT_ID
             val authorizationUrl = LinkedinApiTools().generateAuthorizationUrl(clientId)
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
+            //val intent = LinkedinApiTools().connectLinkedin()
             startActivity(intent)
         }
 
@@ -90,7 +90,7 @@ class HomeFragment : Fragment() {
                 ?.let { this.setDrawable(it) }
         })
 
-        accountViewModel.getAllAccounts.observe(viewLifecycleOwner) { accounts ->
+        accountViewModel.getAllAccounts().observe(viewLifecycleOwner) { accounts ->
             accounts.let { accountItemListAdapter.submitList(it) }
         }
 

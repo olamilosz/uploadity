@@ -90,6 +90,12 @@ class DashboardFragment : Fragment() {
             })
         }
 
+        val fab: View = binding.fab
+        fab.setOnClickListener {
+            val intent = Intent(context, NewPostActivity::class.java)
+            this.startActivity(intent)
+        }
+
         return binding.root
     }
 

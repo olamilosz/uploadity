@@ -59,20 +59,22 @@ class AccountItemListAdapter : ListAdapter<Account, AccountItemListAdapter.Accou
     override fun onBindViewHolder(holder: AccountViewHolder, position: Int) {
         val account = getItem(position)
         holder.textView.text = account.name
+        holder.imageView.setPadding(16, 24, 16, 16)
 
         when (account.socialMediaServiceName) {
             "linkedin" -> {
-                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.linkedin_icon))
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_linkedin))
+                holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.linkedin_blue))
             }
 
             "tumblr" -> {
-                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.tumblr_icon))
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_tumblr))
+                holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.tumblr_background))
             }
 
             "twitter" -> {
-                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.twitter_x_icon))
-                holder.imageView.setPadding(12)
-                holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.black))
+                holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_twitter))
+                holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.twitter_background))
             }
         }
 
