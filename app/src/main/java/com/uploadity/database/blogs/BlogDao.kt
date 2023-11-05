@@ -12,7 +12,7 @@ interface BlogDao {
     fun getAllBlogs(): List<Blog>
 
     @Query("SELECT * FROM blogs WHERE id = :id")
-    fun getBlogByAccountId(id: Int): Blog?
+    fun getBlogById(id: Int): Blog?
 
     @Query("SELECT * FROM blogs WHERE accountId = :accountId")
     fun getBlogsByAccountId(accountId: Int): List<Blog>

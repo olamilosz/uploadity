@@ -17,7 +17,6 @@ import com.uploadity.database.posts.PostDao
 abstract class AppDatabase : RoomDatabase()  {
     private lateinit var databaseInstance: AppDatabase
 
-
     companion object {
         private var instance: AppDatabase? = null
         fun getInstance(context: Context): AppDatabase {

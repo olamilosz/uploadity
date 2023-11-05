@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
-
     <application
         android:name=".UploadityApplication"
         android:allowBackup="true"

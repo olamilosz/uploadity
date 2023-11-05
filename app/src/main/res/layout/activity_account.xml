@@ -18,7 +18,7 @@
         android:theme="?attr/actionBarTheme"
         app:navigationIcon="@drawable/baseline_arrow_back_24_white"
         app:titleTextColor="@color/white"
-        app:title="Account Details"
+        app:title="Szczegóły konta"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
@@ -51,8 +51,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
-                android:text="Account"
-                tools:ignore="HardcodedText" />
+                android:text="@string/konto"/>
 
             <TextView
                 android:id="@+id/account"
@@ -60,31 +59,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="40dp"
                 android:textSize="20sp"
-                android:text="Account"
+                tools:text="Account"
                 tools:ignore="HardcodedText" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
-                android:text="Account ID"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                android:id="@+id/account_id"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="40dp"
-                android:textSize="20sp"
-                android:text="Account ID"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:text="Name"
-                tools:ignore="HardcodedText" />
+                android:text="@string/nazwa" />
 
             <TextView
                 android:id="@+id/name"
@@ -92,33 +74,17 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="40dp"
                 android:textSize="20sp"
-                android:text="Name"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                android:id="@+id/email_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:text="Email"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                android:id="@+id/email"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="40dp"
-                android:textSize="20sp"
-                android:text="Email"
-                tools:ignore="HardcodedText" />
+                tools:text="Name" />
 
             <LinearLayout
                 android:id="@+id/tumblr_blogs_section"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:layout_marginBottom="20dp"
                 android:visibility="gone"
-                android:orientation="vertical">
+                tools:visibility="visible">
 
                 <LinearLayout
                     android:id="@+id/tumblr_blogs_list_title"
@@ -129,28 +95,28 @@
 
                     <TextView
                         android:id="@+id/blog_name_label"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:textSize="16sp"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:text="Blog name"
-                        tools:ignore="HardcodedText" />
+                        android:text="@string/nazwa_bloga" />
 
                     <TextView
                         android:id="@+id/blog_title_label"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
+                        android:textSize="16sp"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:text="Blog title"
-                        tools:ignore="HardcodedText" />
+                        android:text="@string/tytu_bloga" />
                 </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/blog_recycler_view"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
+                    android:layout_height="wrap_content" />
 
             </LinearLayout>
 
@@ -158,8 +124,7 @@
                 android:id="@+id/delete_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="delete account"
-                tools:ignore="HardcodedText" />
+                android:text="@string/usu_konto" />
 
         </LinearLayout>
     </ScrollView>

@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.R
 import com.uploadity.database.accounts.Account
+import com.uploadity.tools.SocialMediaPlatforms
 
 class AccountItemListAdapter : ListAdapter<Account, AccountItemListAdapter.AccountViewHolder>(AccountComparator()) {
 
@@ -62,17 +63,17 @@ class AccountItemListAdapter : ListAdapter<Account, AccountItemListAdapter.Accou
         holder.imageView.setPadding(16, 24, 16, 16)
 
         when (account.socialMediaServiceName) {
-            "linkedin" -> {
+            SocialMediaPlatforms.LINKEDIN.platformName -> {
                 holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_linkedin))
                 holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.linkedin_blue))
             }
 
-            "tumblr" -> {
+            SocialMediaPlatforms.TUMBLR.platformName -> {
                 holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_tumblr))
                 holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.tumblr_background))
             }
 
-            "twitter" -> {
+            SocialMediaPlatforms.TWITTER.platformName -> {
                 holder.imageView.setImageDrawable(context.getDrawable(R.drawable.ic_twitter))
                 holder.imageView.setBackgroundColor(ContextCompat.getColor(context, R.color.twitter_background))
             }
@@ -92,5 +93,4 @@ class AccountItemListAdapter : ListAdapter<Account, AccountItemListAdapter.Accou
     interface OnClickListener {
         fun onClick(position: Int, account: Account)
     }
-
 }

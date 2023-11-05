@@ -1,10 +1,13 @@
 package com.uploadity
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Base64
 import android.util.Log
 import android.view.MenuItem
@@ -16,6 +19,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.JsonObject
 import com.uploadity.api.linkedin.LinkedinApiInterface
@@ -31,12 +37,14 @@ import com.uploadity.api.twitter.TwitterApiInterface
 import com.uploadity.api.twitter.TwitterApiServiceBuilder
 import com.uploadity.api.twitter.datamodels.CreateTwitterPostParams
 import com.uploadity.api.twitter.datamodels.MediaObject
-import com.uploadity.api.twitter.media.TwitterMediaApiInterface
-import com.uploadity.api.twitter.media.TwitterMediaApiServiceBuilder
 import com.uploadity.api.twitter.tools.TwitterApiTools
 import com.uploadity.database.AppDatabase
+import com.uploadity.database.AppDatabaseRepository
+import com.uploadity.database.accounts.Account
+import com.uploadity.database.blogs.Blog
 import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
+import com.uploadity.tools.SocialMediaPlatforms
 import com.uploadity.tools.UserDataStore
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
@@ -44,12 +52,10 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
 import okio.IOException
-import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -65,22 +71,28 @@ class NewPostActivity : AppCompatActivity() {
     private lateinit var appDao: AppDatabase
     private lateinit var mediaUri: Uri
     private lateinit var post: Post
+    private lateinit var appDatabase: AppDatabaseRepository
+    private var accountsChipMap = mutableMapOf<Int, Account>()
+    private var blogChipMap = mutableMapOf<Int, Blog>()
+    private var checkedChipIds = mutableListOf<Int>()
     private var isPicture = true
     private var isMediaSelected = false
     private var isInEditMode = false
     private var wasMediaChanged = false
 
+    @SuppressLint("SetTextI18n")
     @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        appDao = AppDatabase.getInstance(this)
 
+        appDao = AppDatabase.getInstance(this)
+        appDatabase = (application as UploadityApplication).repository
         binding = ActivityNewPostBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         val toolbar = binding.toolbar
-        toolbar.title = ""
         val supportActionBar = supportActionBar
+        toolbar.title = ""
         setSupportActionBar(toolbar)
 
         if (supportActionBar != null) {
@@ -91,21 +103,16 @@ class NewPostActivity : AppCompatActivity() {
         if (intent != null && intent.extras != null) {
             toolbar.title = "Edit Post"
             isInEditMode = true
-
-            if (isInEditMode) {
-                binding.cancelButton.visibility = View.GONE
-                binding.deleteButton.visibility = View.VISIBLE
-
-            } else {
-                binding.cancelButton.visibility = View.VISIBLE
-                binding.deleteButton.visibility = View.GONE
-            }
+            
+            binding.cancelButton.visibility = View.GONE
+            binding.deleteButton.visibility = View.VISIBLE
 
             loadPost(intent.extras!!.getInt("post_id"))
 
         } else {
             toolbar.title = "Create New Post"
             isInEditMode = false
+            post = Post(0, "", "", "", true, false, "")
         }
 
         val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -126,6 +133,10 @@ class NewPostActivity : AppCompatActivity() {
         val saveButton = binding.saveButton
         saveButton.setOnClickListener {
             savePost()
+
+            if (isMediaSelected) {
+                finish()
+            }
         }
 
         binding.cancelButton.setOnClickListener {
@@ -137,19 +148,18 @@ class NewPostActivity : AppCompatActivity() {
                 AlertDialog.Builder(it)
             }
 
-            builder.setMessage("Are you sure to delete this post?")
+            builder.setMessage("Czy na pewno chcesz usunąć post?")
             builder.apply {
-                setPositiveButton("delete") { _, _ ->
+                setPositiveButton("Usuń") { _, _ ->
                     val post = appDao.postDao().getPost(intent.extras!!.getInt("post_id"))
                     if (post != null) {
                         deletePost(post)
-                        Snackbar.make(binding.root, "Post successfully deleted", Snackbar.LENGTH_SHORT).show()
                     }
 
                     finish()
                 }
 
-                setNegativeButton("no") { dialog, _ ->
+                setNegativeButton("Nie") { dialog, _ ->
                     dialog.cancel()
                 }
             }
@@ -163,14 +173,14 @@ class NewPostActivity : AppCompatActivity() {
                 initializeUpload()
 
             } else {
-                Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Wybierz zdjęcie", Snackbar.LENGTH_SHORT).show()
             }
         }
 
         binding.publishTumblrButton.setOnClickListener {
             if (isMediaSelected) {
                 Log.d("publish", "publish tumblr button clicked")
-                publishTumblrPost()
+                //publishTumblrPost()
 
             } else {
                 Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
@@ -185,6 +195,155 @@ class NewPostActivity : AppCompatActivity() {
             } else {
                 Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
             }
+        }
+
+        binding.publishPostButton.setOnClickListener {
+            if (isMediaSelected) {
+                Log.d("publish", "publish button clicked")
+                publishToSelectedAccounts()
+
+            } else {
+                Snackbar.make(binding.root, "Select media", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
+        val descriptionCharacterCountTextView = binding.descriptionCharacterCount
+        descriptionCharacterCountTextView.text = "0 / 280"
+
+        val descriptionEditText = binding.descriptionEditText
+
+        descriptionEditText.addTextChangedListener(object: TextWatcher {
+            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+            override fun afterTextChanged(p0: Editable?) {
+                if (p0 != null) {
+                    descriptionCharacterCountTextView.text = "${p0.count()} / 280"
+                }
+            }
+
+            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+        })
+
+        val accountChipGroup = binding.accountChipGroup
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!post.isPublished) {
+                addAccountChips(accountChipGroup)
+            }
+        }
+
+        accountChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            Log.d("CHIP GROUP", "checked Ids $checkedIds")
+            checkedChipIds = checkedIds
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun publishToSelectedAccounts() {
+        Log.d("PUBLISH TO ALL", "")
+
+        if (checkedChipIds.isNotEmpty()) {
+            savePost()
+            post.isPublished = true
+            appDao.postDao().update(post)
+
+            for (accountChip in accountsChipMap) {
+                if (checkedChipIds.contains(accountChip.key)) {
+                    val account = accountChip.value
+
+                    when (account.socialMediaServiceName) {
+                        SocialMediaPlatforms.LINKEDIN.platformName -> {
+                            Log.d("LINKEDIN ACCOUNT", account.name.toString())
+
+                            initializeUpload()
+                        }
+
+                        SocialMediaPlatforms.TWITTER.platformName -> {
+                            Log.d("TWITTER ACCOUNT", account.name.toString())
+
+                            publishTwitterPost()
+                        }
+                    }
+                }
+            }
+
+            for (blogChip in blogChipMap) {
+                if (checkedChipIds.contains(blogChip.key)) {
+                    val blog = blogChip.value
+                    Log.d("BLOG", blog.name)
+
+                    publishTumblrPost(blog.id)
+                }
+            }
+
+            finish()
+
+        } else {
+            Snackbar.make(binding.root, "Wybierz przynajmniej jedno konto", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun addAccountChips(chipGroup: ChipGroup) {
+        val accountList = appDao.accountDao().getAllAccounts()
+        val noAccountsConnectedView = binding.noAccountsConnected
+
+        if (accountList.isNotEmpty()) {
+            val context = this
+            chipGroup.visibility = View.VISIBLE
+            noAccountsConnectedView.visibility = View.GONE
+
+            for (account in accountList) {
+                if (account.socialMediaServiceName == SocialMediaPlatforms.TUMBLR.platformName) {
+                    //TODO: iteracja po blogach i osobne chipy
+                    val blogList = appDao.blogDao().getBlogsByAccountId(account.id)
+
+                    if (blogList.isNotEmpty()) {
+                        for (blog in blogList) {
+                            val blogChip = layoutInflater.inflate(R.layout.account_chip, chipGroup, false) as Chip
+
+                            blogChip.apply {
+                                text = blog.name
+                                isCheckable = true
+                                isCheckedIconVisible = false
+                                isChecked = false
+                                chipIcon = AppCompatResources.getDrawable(context, R.drawable.ic_tumblr)
+                            }
+
+                            chipGroup.addView(blogChip)
+                            blogChipMap[blogChip.id] = blog
+                            Log.d("CHIP CREATE", "BLOG id ${blogChip.id} NAME ${blogChip.text}")
+                        }
+                    }
+
+                } else {
+                    val accountChip = layoutInflater.inflate(R.layout.account_chip, chipGroup, false) as Chip
+
+                    accountChip.apply {
+                        text = account.name
+                        isCheckable = true
+                        isCheckedIconVisible = false
+                        isChecked = false
+                    }
+
+                    when (account.socialMediaServiceName) {
+                        SocialMediaPlatforms.LINKEDIN.platformName -> {
+                            accountChip.chipIcon = AppCompatResources.getDrawable(context, R.drawable.ic_linkedin)
+                        }
+
+                        SocialMediaPlatforms.TWITTER.platformName -> {
+                            accountChip.chipIcon = AppCompatResources.getDrawable(context, R.drawable.ic_twitter)
+                        }
+                    }
+
+                    chipGroup.addView(accountChip)
+                    accountsChipMap[accountChip.id] = account
+                    Log.d("CHIP CREATE", "id ${accountChip.id} NAME ${accountChip.text}")
+                }
+            }
+
+        } else {
+            chipGroup.visibility = View.GONE
+            noAccountsConnectedView.visibility = View.VISIBLE
         }
     }
 
@@ -267,7 +426,7 @@ class NewPostActivity : AppCompatActivity() {
         twitterApi.createTwitterPost(
             authorizationHeader,
             CreateTwitterPostParams(
-                "test1",
+                binding.descriptionEditText.text.toString(),
                 MediaObject(arrayOf(mediaId))
             )
 
@@ -305,20 +464,14 @@ class NewPostActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun publishTumblrPost() {
-        //TODO: dodawanie zdjęcia na blog / wszystkie blogi?????????????????
-        // może tylko pierwszy dla testu
-
+    private fun publishTumblrPost(blogId: Int) {
         var accessToken = ""
 
         runBlocking {
             accessToken = getStringPreference(getString(R.string.tumblr_access_token_key))
         }
 
-        //poki co olewamy cale to PostAccount, tylko testujemy pierwszy z brzegu blog plus accesstoken
-        //bo i tak mamy tylko jedno konto tumblr i niepotrzebny nam właściciel bloga
-
-        val blog = appDao.blogDao().getFirstBlog()
+        val blog = appDao.blogDao().getBlogById(blogId)
 
         if (blog != null && accessToken.isNotEmpty()) {
             val tumblrApi = TumblrApiServiceBuilder.buildService(TumblrApiInterface::class.java)
@@ -392,6 +545,7 @@ class NewPostActivity : AppCompatActivity() {
             linkedinApi.initializeImageUpload(
                 "Bearer $accessToken",
                 body.toString().toRequestBody(mediaType)
+
             ).enqueue(object : Callback<ResponseBody> {
                 override fun onResponse(
                     call: Call<ResponseBody>,
@@ -509,10 +663,12 @@ class NewPostActivity : AppCompatActivity() {
 
         if (post.title!!.isNotEmpty()) {
             binding.titleEditText.setText(post.title, TextView.BufferType.EDITABLE)
+            binding.titleText.text = post.title
         }
 
         if (post.description!!.isNotEmpty()) {
             binding.descriptionEditText.setText(post.description, TextView.BufferType.EDITABLE)
+            binding.descriptionText.text = post.description
         }
 
         if (post.mediaUri!!.isNotEmpty()) {
@@ -523,20 +679,25 @@ class NewPostActivity : AppCompatActivity() {
                 val imageView = binding.imageView
                 imageView.visibility = View.VISIBLE
                 imageView.setImageURI(Uri.parse(post.mediaUri))
-
-            } else {
-                val videoView = binding.videoView
-                videoView.visibility = View.VISIBLE
-                videoView.setVideoURI(Uri.parse(post.mediaUri))
-
-                val videoControllerView = binding.videoController
-                val videoController = MediaController(this)
-
-                videoController.setAnchorView(videoControllerView)
-                videoController.setMediaPlayer(videoView)
-                videoView.setMediaController(videoController)
-                videoView.start()
             }
+        }
+
+        if (post.isPublished) {
+            binding.publishPostButton.visibility = View.GONE
+            binding.cancelButton.visibility = View.GONE
+            binding.saveButton.visibility = View.GONE
+            binding.deleteButton.visibility = View.VISIBLE
+
+            binding.accountsLabelText.visibility = View.GONE
+            binding.accountChipGroup.visibility = View.GONE
+            binding.noAccountsConnected.visibility = View.GONE
+            binding.chooseMediaButton.visibility = View.GONE
+
+            binding.titleEditText.visibility = View.GONE
+            binding.descriptionEditText.visibility = View.GONE
+            binding.titleText.visibility = View.VISIBLE
+            binding.descriptionText.visibility = View.VISIBLE
+            binding.descriptionCharacterCount.visibility = View.GONE
         }
     }
 
@@ -613,13 +774,13 @@ class NewPostActivity : AppCompatActivity() {
 
         } else {
             if (isMediaSelected) {
-                val post = Post(
+                val newPost = Post(
                     0, title.text.toString(),
                     description.text.toString(), "", isPicture,
                     false, ""
                 )
 
-                val postId = appDao.postDao().insertAndGetId(post)
+                val postId = appDao.postDao().insertAndGetId(newPost)
                 val file = File(applicationContext.filesDir, "post_$postId.png")
 
                 if (!file.exists()) {
@@ -640,15 +801,17 @@ class NewPostActivity : AppCompatActivity() {
                 }
 
                 val mediaUri = file.toURI().toString()
-                post.mediaUri = mediaUri
-                post.id = postId.toInt()
+                newPost.mediaUri = mediaUri
+                newPost.id = postId.toInt()
 
-                appDao.postDao().update(post)
-
+                post = newPost
+                appDao.postDao().update(newPost)
                 Log.d("save post", "Post id ${post.id} media uri ${post.mediaUri} ismediaselsected $isMediaSelected")
 
             } else {
-                appDao.postDao().insert(
+                Snackbar.make(binding.root, "Wybierz zdjęcie", Snackbar.LENGTH_SHORT).show()
+
+                /*appDao.postDao().insert(
                     Post(
                         0, title.text.toString(),
                         description.text.toString(), "", isPicture,
@@ -656,11 +819,9 @@ class NewPostActivity : AppCompatActivity() {
                     )
                 )
 
-                Log.d("save post", "Post id ${post.id} media uri empty ismediaselsected $isMediaSelected")
+                Log.d("save post", "Post id ${post.id} media uri empty ismediaselsected $isMediaSelected")*/
             }
         }
-
-        finish()
     }
 
     private fun chooseMedia(uri: Uri) {

@@ -1,53 +1,34 @@
 package com.uploadity.ui.home
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.AccountActivity
-import com.uploadity.BuildConfig
 import com.uploadity.R
 import com.uploadity.UploadityApplication
-import com.uploadity.api.linkedin.LinkedinApiTools
-import com.uploadity.api.tumblr.tools.TumblrApiTools
-import com.uploadity.api.twitter.TwitterApiInterface
-import com.uploadity.api.twitter.TwitterApiServiceBuilder
-import com.uploadity.api.twitter.tools.TwitterApiTools
-import com.uploadity.database.AppDatabase
 import com.uploadity.database.accounts.Account
 import com.uploadity.databinding.FragmentHomeBinding
+import com.uploadity.tools.SocialMediaPlatforms
+import com.uploadity.tools.UserDataStore
 import com.uploadity.ui.uicomponents.AccountItemListAdapter
-import com.uploadity.viewmodels.AccountViewModel
-import com.uploadity.viewmodels.AccountViewModelFactory
-import kotlinx.coroutines.flow.collect
-import okhttp3.ResponseBody
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import java.net.URLEncoder
+import com.uploadity.viewmodels.MainViewModel
+import com.uploadity.viewmodels.MainViewModelFactory
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-    private val accountViewModel: AccountViewModel by viewModels {
-        AccountViewModelFactory((requireActivity().application as UploadityApplication).repository)
-    }
+    private lateinit var mainViewModel: MainViewModel
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
@@ -59,25 +40,31 @@ class HomeFragment : Fragment() {
         val root: View = binding.root
         val connectButton = binding.button
 
+        mainViewModel = ViewModelProvider(
+            this,
+            MainViewModelFactory(
+                (requireActivity().application as UploadityApplication).repository,
+                UserDataStore(requireContext()))
+        )[MainViewModel::class.java]
+
         connectButton.setOnClickListener {
-            val clientId = BuildConfig.LINKEDIN_CLIENT_ID
-            val authorizationUrl = LinkedinApiTools().generateAuthorizationUrl(clientId)
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
-            //val intent = LinkedinApiTools().connectLinkedin()
+            val intent = mainViewModel.createAuthorizeLinkedinIntent()
             startActivity(intent)
         }
 
         val connectTumblrButton = binding.buttonConnectTumblr
         connectTumblrButton.setOnClickListener {
-            val clientId = BuildConfig.TUMBLR_CLIENT_ID
-            val authorizationUrl = TumblrApiTools().generateAuthorizationUrl(clientId)
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl))
+            val intent = mainViewModel.createAuthorizeTumblrIntent()
             startActivity(intent)
         }
 
         val connectTwitterButton = binding.buttonConnectTwitter
         connectTwitterButton.setOnClickListener {
-            requestTwitterToken()
+            mainViewModel.requestTwitterToken()
+        }
+
+        mainViewModel.getTwitterAuthorizationIntent().observe(viewLifecycleOwner) {
+            startActivity(it)
         }
 
         val recyclerView = binding.accountList
@@ -90,8 +77,30 @@ class HomeFragment : Fragment() {
                 ?.let { this.setDrawable(it) }
         })
 
-        accountViewModel.getAllAccounts().observe(viewLifecycleOwner) { accounts ->
+        val accountButtonsSection = binding.accountButtonsSection
+        val accountListSection = binding.accountListSection
+
+        mainViewModel.getAllAccounts().observe(viewLifecycleOwner) { accounts ->
             accounts.let { accountItemListAdapter.submitList(it) }
+
+            when (accounts.size) {
+                0 -> {
+                    accountButtonsSection.visibility = View.VISIBLE
+                    accountListSection.visibility = View.GONE
+                    setButtonsVisibility(accounts)
+                }
+
+                3 -> {
+                    accountButtonsSection.visibility = View.GONE
+                    accountListSection.visibility = View.VISIBLE
+                }
+
+                else -> {
+                    accountButtonsSection.visibility = View.VISIBLE
+                    accountListSection.visibility = View.VISIBLE
+                    setButtonsVisibility(accounts)
+                }
+            }
         }
 
         accountItemListAdapter.setOnClickListener(object : AccountItemListAdapter.OnClickListener {
@@ -107,59 +116,18 @@ class HomeFragment : Fragment() {
         return root
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun requestTwitterToken() {
-        val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
-        val callbackUrl = "https://uploadity.net.pl/twitter"
+    private fun setButtonsVisibility(accounts: List<Account>) {
+        binding.button.visibility = View.VISIBLE
+        binding.buttonConnectTumblr.visibility = View.VISIBLE
+        binding.buttonConnectTwitter.visibility = View.VISIBLE
 
-        val authorizationHeader = TwitterApiTools()
-            .generateRequestTokenAuthorizationHeader(callbackUrl)
-
-        Log.d("authorizationHeader", authorizationHeader)
-
-        twitterApi.requestToken(
-            authorizationHeader,
-            callbackUrl
-
-        ).enqueue(object: Callback<ResponseBody> {
-            override fun onResponse(
-                call: Call<ResponseBody>,
-                response: Response<ResponseBody>
-            ) {
-                val responseBody = response.body()
-
-                if (responseBody != null) {
-                    val responseParameterList = responseBody.string().split("&")
-                    val responseParameterMap = mutableMapOf<String, String>()
-
-                    for (parameter in responseParameterList) {
-                        responseParameterMap[parameter.substringBefore("=").trim()] =
-                            parameter.substringAfter("=").trim()
-                    }
-
-                    if (responseParameterMap["oauth_callback_confirmed"] == "true") {
-                        val oauthToken = responseParameterMap["oauth_token"] ?: ""
-
-                        if (oauthToken.isNotEmpty()) {
-                            authorizeTwitter(oauthToken)
-                        }
-                    }
-                }
+        for (account in accounts) {
+            when (account.socialMediaServiceName) {
+                SocialMediaPlatforms.LINKEDIN.platformName -> binding.button.visibility = View.GONE
+                SocialMediaPlatforms.TUMBLR.platformName -> binding.buttonConnectTumblr.visibility = View.GONE
+                SocialMediaPlatforms.TWITTER.platformName -> binding.buttonConnectTwitter.visibility = View.GONE
             }
-
-            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                Log.e("requestToken", "onFailure code ${t.message}")
-            }
-        })
-    }
-
-    fun authorizeTwitter(oauthToken: String) {
-        val browserIntent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://api.twitter.com/oauth/authorize?oauth_token=$oauthToken")
-        )
-
-        startActivity(browserIntent)
+        }
     }
 
     override fun onDestroyView() {

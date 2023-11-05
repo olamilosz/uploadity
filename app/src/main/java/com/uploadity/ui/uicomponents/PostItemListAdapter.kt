@@ -9,12 +9,14 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.uploadity.R
+import com.uploadity.database.accounts.Account
 import com.uploadity.database.posts.Post
 
-class PostItemListAdapter(private val dataSet: List<Post>) :
-    RecyclerView.Adapter<PostItemListAdapter.ViewHolder>() {
+class PostItemListAdapter : ListAdapter<Post, PostItemListAdapter.ViewHolder>(PostComparator()) {
 
     private var onClickListener: OnClickListener? = null
 
@@ -30,6 +32,16 @@ class PostItemListAdapter(private val dataSet: List<Post>) :
         }
     }
 
+    class PostComparator: DiffUtil.ItemCallback<Post>() {
+        override fun areItemsTheSame(oldItem: Post, newItem: Post): Boolean {
+            return oldItem === newItem
+        }
+
+        override fun areContentsTheSame(oldItem: Post, newItem: Post): Boolean {
+            return oldItem.id == newItem.id
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.post_item_list_adapter, parent, false)
@@ -37,11 +49,9 @@ class PostItemListAdapter(private val dataSet: List<Post>) :
         return ViewHolder(view)
     }
 
-    override fun getItemCount() = dataSet.size
-
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val post = dataSet[position]
+        val post = getItem(position)
         holder.textView.text = post.title
 
         if (post.isPicture) {

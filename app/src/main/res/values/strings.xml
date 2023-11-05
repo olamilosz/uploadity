@@ -1,12 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Uploadity</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Drafts</string>
-    <string name="title_notifications">Notifications</string>
-    <string name="button_home_create">Create</string>
-    <string name="text_home">Start creating post drafts for social media!</string>
-    <string name="text_home_2">In the future you will be able to connect your social media accounts and post them from Uploadity app!</string>
-    <string name="choose_photo">Choose media</string>
+    <string name="title_home">Konta</string>
+    <string name="title_dashboard">Posty</string>
+    <string name="choose_photo">Wybierz zdjęcie</string>
     <string name="add_post">Add Post</string>
     <string name="linkedin">Linkedin</string>
 
@@ -14,9 +10,6 @@
     <string name="LINKEDIN_CLIENT_SECRET">UpNygVsjxoYu96iZ</string>
     <string name="linkedin_access_token_key">linkedin_access_token_key</string>
     <string name="linkedin_id_key">linkedin_id_key</string>
-
-    <string name="TUMBLR_CLIENT_ID" tools:ignore="Typos">sH2NCmI57JZ8RdhprhPng28l8gO65EX1CVWPfCqF1xLwbsXhNf</string>
-    <string name="TUMBLR_CLIENT_SECRET">tX16AhNqRlO2VagtLQWxjG953q4jymKZ4dga95jlbfo5oR2R7Z</string>
     <string name="tumblr_access_token_key">tumblr_access_token_key</string>
     <string name="tumblr_id_key">tumblr_id_key</string>
 
@@ -27,4 +20,21 @@
     <string name="delete">delete</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="konto">Konto</string>
+    <string name="nazwa">Nazwa</string>
+    <string name="nazwa_bloga">Nazwa bloga</string>
+    <string name="tytu_bloga">Tytuł bloga</string>
+    <string name="usu_konto">Usuń konto</string>
+    <string name="tytul">Tytuł</string>
+    <string name="opis_posta">Opis posta</string>
+    <string name="wybierz_konta">Wybierz konta lub blogi</string>
+    <string name="brak_polaczonych_kont">Brak połączonych kont</string>
+    <string name="anuluj">Anuluj</string>
+    <string name="usun">Usuń</string>
+    <string name="zapisz">Zapisz</string>
+    <string name="opublikuj">Opublikuj</string>
+    <string name="opublikowane_posty">Opublikowane posty</string>
+    <string name="wersje_robocze">Wersje robocze</string>
+    <string name="dodaj_nowe_konto">Dodaj nowe konto</string>
+    <string name="lista_kont">Lista kont</string>
 </resources>

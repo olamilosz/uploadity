@@ -4,4 +4,17 @@
         <item name="android:textColor">@color/dark_grey</item>
         <item name="android:textSize">20sp</item>
     </style>
+
+    <style name="ChipTextAppearance" parent="TextAppearance.Material3.LabelMedium"/>
+
+    <style name="AccountChip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">@color/linkedin_chip_background</item>
+        <item name="chipIconTint">@color/linkedin_chip_icon</item>
+        <item name="chipIconSize">18dp</item>
+        <item name="chipIconVisible">true</item>
+        <item name="chipStartPadding">16dp</item>
+        <item name="android:textAppearance">@style/ChipTextAppearance</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/linkedin_chip_text</item>
+    </style>
 </resources>
