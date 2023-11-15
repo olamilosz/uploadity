@@ -10,14 +10,8 @@ interface PostAccountDao {
     @Query("SELECT * FROM post_accounts")
     fun getAllPostAccounts(): List<PostAccount>
 
-    @Query("SELECT * FROM post_accounts WHERE accountId = :accountId")
-    fun getPostAccountByAccountId(accountId: Int): PostAccount?
-
     @Query("SELECT * FROM post_accounts WHERE postId = :postId")
     fun getPostAccountByPostId(postId: Int): List<PostAccount>
-
-    @Query("DELETE FROM post_accounts WHERE accountId = :accountId")
-    fun deletePostAccountsByAccountId(accountId: Int)
 
     @Query("DELETE FROM post_accounts WHERE postId = :postId")
     fun deletePostAccountsByPostId(postId: Int)

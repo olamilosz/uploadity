@@ -110,7 +110,7 @@ class AccountActivity : AppCompatActivity() {
 
         if (account.socialMediaServiceName == SocialMediaPlatforms.TUMBLR.platformName) {
             appDao.blogDao().deleteBlogsByAccountId(account.id)
-            appDao.postAccountDao().deletePostAccountsByAccountId(account.id)
+            //appDao.postAccountDao().deletePostAccountsByAccountId(account.id)
         }
 
         runBlocking {

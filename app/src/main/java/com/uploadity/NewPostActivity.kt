@@ -20,6 +20,8 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.snackbar.Snackbar
@@ -42,10 +44,12 @@ import com.uploadity.database.AppDatabase
 import com.uploadity.database.AppDatabaseRepository
 import com.uploadity.database.accounts.Account
 import com.uploadity.database.blogs.Blog
+import com.uploadity.database.postaccount.PostAccount
 import com.uploadity.database.posts.Post
 import com.uploadity.databinding.ActivityNewPostBinding
 import com.uploadity.tools.SocialMediaPlatforms
 import com.uploadity.tools.UserDataStore
+import com.uploadity.ui.uicomponents.PostAccountItemListAdapter
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -423,6 +427,9 @@ class NewPostActivity : AppCompatActivity() {
             accessTokenSecret
         )
 
+        val twitterAccount = appDao.accountDao()
+            .getAccountBySocialMediaName(SocialMediaPlatforms.TWITTER.platformName)
+
         twitterApi.createTwitterPost(
             authorizationHeader,
             CreateTwitterPostParams(
@@ -437,10 +444,40 @@ class NewPostActivity : AppCompatActivity() {
                 if (responseBody != null) {
                     Log.d("twitter post response", "response ${responseBody.string()}")
                 }
+
+                if (twitterAccount != null) {
+                    //post account success
+                    appDao.postAccountDao().insert(
+                        PostAccount(
+                            post.id,
+                            twitterAccount.id,
+                            -1,
+                            true,
+                            null,
+                            SocialMediaPlatforms.TWITTER.platformName,
+                            twitterAccount.name ?: ""
+                        )
+                    )
+                }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                 Log.e("twitter post failure", t.message.toString())
+
+                if (twitterAccount != null) {
+                    //post account failure
+                    appDao.postAccountDao().insert(
+                        PostAccount(
+                            post.id,
+                            twitterAccount.id,
+                            -1,
+                            false,
+                            null,
+                            SocialMediaPlatforms.TWITTER.platformName,
+                            twitterAccount.name ?: ""
+                        )
+                    )
+                }
             }
         })
     }
@@ -453,6 +490,7 @@ class NewPostActivity : AppCompatActivity() {
             imageFile.delete()
         }
 
+        appDao.postAccountDao().deletePostAccountsByPostId(postId)
         appDao.postDao().delete(post)
     }
 
@@ -507,10 +545,36 @@ class NewPostActivity : AppCompatActivity() {
                     ) {
                         //Log.d("tumblr image code", response.code().toString())
                         //Log.d("tumblr image msg", response.message())
+
+                        //post account success
+                        appDao.postAccountDao().insert(
+                            PostAccount(
+                                post.id,
+                                blog.accountId,
+                                blogId,
+                                true,
+                                null,
+                                SocialMediaPlatforms.TUMBLR.platformName,
+                                blog.name
+                            )
+                        )
                     }
 
                     override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                         Log.e("tumblr image failure", t.message.toString())
+
+                        //post account failure
+                        appDao.postAccountDao().insert(
+                            PostAccount(
+                                post.id,
+                                blog.accountId,
+                                blogId,
+                                false,
+                                null,
+                                SocialMediaPlatforms.TUMBLR.platformName,
+                                blog.name
+                            )
+                        )
                     }
                 })
 
@@ -612,6 +676,7 @@ class NewPostActivity : AppCompatActivity() {
         val description = binding.descriptionEditText.text.toString()
         val title = binding.titleEditText.toString()
         val linkedinApi = LinkedinApiServiceBuilder.buildService(LinkedinApiInterface::class.java)
+        val linkedinAccount = appDao.accountDao().getAccountBySocialMediaName(SocialMediaPlatforms.LINKEDIN.platformName)
 
         runBlocking {
             userId = getStringPreference(getString(R.string.linkedin_id_key))
@@ -648,11 +713,41 @@ class NewPostActivity : AppCompatActivity() {
 
                     post.isPublished = true
                     appDao.postDao().update(post)
+
+                    if (linkedinAccount != null) {
+                        //post account success
+                        appDao.postAccountDao().insert(
+                            PostAccount(
+                                post.id,
+                                linkedinAccount.id,
+                                -1,
+                                true,
+                                null,
+                                SocialMediaPlatforms.LINKEDIN.platformName,
+                                linkedinAccount.name ?: ""
+                            )
+                        )
+                    }
                 }
 
                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                     Log.e("publishPost onFailure", t.message.toString())
                     Log.e("publishPost onFailure", t.cause.toString())
+
+                    if (linkedinAccount != null) {
+                        //post account failure
+                        appDao.postAccountDao().insert(
+                            PostAccount(
+                                post.id,
+                                linkedinAccount.id,
+                                -1,
+                                false,
+                                null,
+                                SocialMediaPlatforms.LINKEDIN.platformName,
+                                linkedinAccount.name ?: ""
+                            )
+                        )
+                    }
                 }
             })
         }
@@ -698,6 +793,24 @@ class NewPostActivity : AppCompatActivity() {
             binding.titleText.visibility = View.VISIBLE
             binding.descriptionText.visibility = View.VISIBLE
             binding.descriptionCharacterCount.visibility = View.GONE
+
+            //postaccounts
+            val postAccountList = appDao.postAccountDao().getPostAccountByPostId(postId)
+            Log.d("postAccountList", postAccountList.toString())
+
+            if (postAccountList.isNotEmpty()) {
+                binding.publishedSection.visibility = View.VISIBLE
+                val postAccountsRecyclerView = binding.postAccountListPublished
+                val postAccountsListAdapter = PostAccountItemListAdapter()
+
+                postAccountsListAdapter.submitList(postAccountList)
+                postAccountsRecyclerView.adapter = postAccountsListAdapter
+                postAccountsRecyclerView.layoutManager = LinearLayoutManager(this)
+                postAccountsRecyclerView.addItemDecoration(DividerItemDecoration(this, LinearLayoutManager.VERTICAL).apply {
+                    AppCompatResources.getDrawable(this@NewPostActivity, R.drawable.margin_vertical_20dp)
+                        ?.let { this.setDrawable(it) }
+                })
+            }
         }
     }
 

@@ -22,6 +22,9 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE id = :id")
     fun getAccount(id: Int): Account?
 
+    @Query("SELECT * FROM accounts WHERE socialMediaServiceName = :socialMediaName LIMIT 1")
+    fun getAccountBySocialMediaName(socialMediaName: String): Account?
+
     @Insert
     fun insert(account: Account): Long
 

@@ -37,4 +37,7 @@
     <string name="wersje_robocze">Wersje robocze</string>
     <string name="dodaj_nowe_konto">Dodaj nowe konto</string>
     <string name="lista_kont">Lista kont</string>
+    <string name="opublikowano_na">Opublikowano na:</string>
+    <string name="usun_post">Usuń</string>
+    <string name="usunieto_na">Usunięto na:</string>
 </resources>
