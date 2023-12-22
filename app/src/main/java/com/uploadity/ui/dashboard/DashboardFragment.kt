@@ -46,7 +46,7 @@ class DashboardFragment : Fragment() {
 
         postItemListAdapter.setOnClickListener(object : PostItemListAdapter.OnClickListener {
             override fun onClick(position: Int, post: Post) {
-                Log.d("published post item click", "ON CLICK: postition $position ${post.title}")
+                Log.d("published post item click", "ON CLICK: position $position ${post.title}")
 
                 val intent = Intent(context, NewPostActivity::class.java)
                 intent.putExtra("post_id", post.id)

@@ -5,10 +5,12 @@ import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface TwitterApiInterface {
@@ -21,7 +23,6 @@ interface TwitterApiInterface {
 
     @POST("oauth/access_token")
     fun accessToken(
-        //@Header("Authorization") authorizationHeader: String,
         @Query("oauth_token") oauthToken: String,
         @Query("oauth_verifier") oauthVerifier: String
     ): Call<ResponseBody>
@@ -31,5 +32,11 @@ interface TwitterApiInterface {
     fun createTwitterPost(
         @Header("Authorization") authorizationHeader: String,
         @Body requestBody: CreateTwitterPostParams
+    ): Call<ResponseBody>
+
+    @DELETE("2/tweets/{id}")
+    fun deleteTwitterPost(
+        @Header("Authorization") authorizationHeader: String,
+        @Path("id") id: String
     ): Call<ResponseBody>
 }

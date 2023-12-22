@@ -1,6 +1,5 @@
 package com.uploadity
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -110,7 +109,7 @@ class AccountActivity : AppCompatActivity() {
 
         if (account.socialMediaServiceName == SocialMediaPlatforms.TUMBLR.platformName) {
             appDao.blogDao().deleteBlogsByAccountId(account.id)
-            //appDao.postAccountDao().deletePostAccountsByAccountId(account.id)
+            appDao.postAccountDao().deletePostAccountsByAccountId(account.id)
         }
 
         runBlocking {

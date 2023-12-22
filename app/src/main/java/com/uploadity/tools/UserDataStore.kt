@@ -11,15 +11,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class UserDataStore(private val context: Context?) {
-    companion object {
-        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("datastore")
-    }
-
     val linkedinAccessTokenKey = "linkedin_access_token_key"
     val linkedinIdKey = "linkedin_id_key"
     val tumblrAccessTokenKey = "tumblr_access_token_key"
     val twitterAccessTokenKey = "twitter_access_token_key"
     val twitterAccessTokenSecretKey = "twitter_access_token_secret_key"
+
+    companion object {
+        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("datastore")
+    }
 
     suspend fun getStringPreference(key: String): String {
         val stringPreferenceKey = stringPreferencesKey(key)

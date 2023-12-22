@@ -3,6 +3,7 @@ package com.uploadity.api.tumblr
 import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenParams
 import com.uploadity.api.tumblr.datamodels.TumblrAccessTokenResponse
 import com.uploadity.api.tumblr.datamodels.TumblrCreatePostParams
+import com.uploadity.api.tumblr.datamodels.TumblrDeletePostParams
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -14,6 +15,7 @@ import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface TumblrApiInterface {
 
@@ -41,5 +43,12 @@ interface TumblrApiInterface {
         @Header("Authorization") authorization: String,
         @Path("blog-identifier") blogIdentifier: String,
         @Body requestBody: TumblrCreatePostParams
+    ): Call<ResponseBody>
+
+    @POST("v2/blog/{blog-identifier}/post/delete")
+    fun deletePost(
+        @Header("Authorization") authorization: String,
+        @Path("blog-identifier") blogIdentifier: String,
+        @Body requestBody: TumblrDeletePostParams
     ): Call<ResponseBody>
 }

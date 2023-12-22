@@ -5,6 +5,8 @@ import com.uploadity.database.accounts.Account
 import com.uploadity.database.accounts.AccountDao
 import com.uploadity.database.blogs.Blog
 import com.uploadity.database.blogs.BlogDao
+import com.uploadity.database.postaccount.PostAccount
+import com.uploadity.database.postaccount.PostAccountDao
 import com.uploadity.database.posts.Post
 import com.uploadity.database.posts.PostDao
 import kotlinx.coroutines.flow.Flow
@@ -12,12 +14,14 @@ import kotlinx.coroutines.flow.Flow
 class AppDatabaseRepository(
     private val accountDao: AccountDao,
     private val blogDao: BlogDao,
-    private val postDao: PostDao
+    private val postDao: PostDao,
+    private val postAccountDao: PostAccountDao
 ) {
     val allAccounts: Flow<List<Account>> = accountDao.getAllAccountsFlow()
     val allPosts: Flow<List<Post>> = postDao.getAllPostsFlow()
     val allPublishedPosts: Flow<List<Post>> = postDao.getAllPublishedPostsFlow()
     val allUnpublishedPosts: Flow<List<Post>> = postDao.getAllUnpublishedPostsFlow()
+    val allPostAccounts: Flow<List<PostAccount>> = postAccountDao.getAllPostAccountsFlow()
 
     @Suppress("RedundantSuspendModifier")
     @WorkerThread

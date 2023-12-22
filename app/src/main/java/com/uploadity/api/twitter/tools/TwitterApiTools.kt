@@ -93,6 +93,47 @@ class TwitterApiTools {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    fun generateDeleteAuthorizationHeader(requestUrl: String, parameterMap: MutableMap<String, String>,
+                                    accessTokenSecret: String): String {
+        val signatureParameterMap = generateSignatureParameterMap()
+        val concatenatedMap = signatureParameterMap.plus(parameterMap)
+
+        val accessToken = parameterMap["oauth_token"]
+
+        val authorizationHeader = StringBuilder()
+        authorizationHeader.append("OAuth ")
+
+        Log.d("generate header", "parameterMap: $parameterMap")
+        Log.d("generate header", "concatenatedMap: $concatenatedMap")
+
+        if (!accessToken.isNullOrBlank()) {
+            val signature = generateSignature("DELETE", requestUrl, accessTokenSecret,
+                concatenatedMap)
+
+            signatureParameterMap[signatureParamName] = URLEncoder.encode(signature, "UTF-8")
+            signatureParameterMap[tokenParamName] = accessToken
+
+            Log.d("signature", "$signatureParamName $signature")
+
+            val sortedParameterList = signatureParameterMap.toSortedMap().toList()
+
+            for (parameter in sortedParameterList) {
+                if (parameter.first.startsWith("oauth")) {
+                    authorizationHeader.append("${parameter.first}=\"${parameter.second}\"")
+                }
+
+                if (parameter != sortedParameterList.last()) {
+                    authorizationHeader.append(", ")
+                }
+
+                Log.d("param authorizationHeader", "${parameter.first} ${parameter.second}")
+            }
+        }
+
+        return authorizationHeader.toString()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun generateSignatureParameterMap(): MutableMap<String, String> {
         val parameterMap = mutableMapOf<String, String>()
 

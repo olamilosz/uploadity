@@ -16,5 +16,5 @@
     <color name="blue">#249EF1</color>
     <color name="linkedin_blue">#0882BD</color>
     <color name="tumblr_background">#35465c</color>
-    <color name="twitter_background">#1da1f2</color>
+    <color name="twitter_background">#000000</color>
 </resources>

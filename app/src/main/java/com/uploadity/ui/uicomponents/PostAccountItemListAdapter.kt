@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -21,18 +22,19 @@ import com.uploadity.tools.SocialMediaPlatforms
 class PostAccountItemListAdapter: ListAdapter<PostAccount, PostAccountItemListAdapter.ViewHolder>(PostAccountComparator()) {
 
     private var onClickListener: PostAccountItemListAdapter.OnClickListener? = null
+    private var onEditButtonClickListener: PostAccountItemListAdapter.OnEditButtonClickListener? = null
     private lateinit var context: Context
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val rowItem: LinearLayout
         val icon: ImageView
         val textView: TextView
-        val deleteButton: Button
+        val editButton: ImageButton
+        val deleteButton: ImageButton
 
         init {
-            rowItem = view.findViewById(R.id.row_item)
             icon = view.findViewById(R.id.icon)
             textView = view.findViewById(R.id.text_view)
+            editButton = view.findViewById(R.id.edit_button)
             deleteButton = view.findViewById(R.id.delete_button)
         }
     }
@@ -93,7 +95,15 @@ class PostAccountItemListAdapter: ListAdapter<PostAccount, PostAccountItemListAd
         this.onClickListener = onClickListener
     }
 
+    fun setOnEditButtonClickListener(onClickListener: OnEditButtonClickListener) {
+        this.onEditButtonClickListener = onClickListener
+    }
+
     interface OnClickListener {
+        fun onClick(position: Int, post: PostAccount)
+    }
+
+    interface OnEditButtonClickListener {
         fun onClick(position: Int, post: PostAccount)
     }
 

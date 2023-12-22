@@ -1,6 +1,7 @@
 package com.uploadity
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -20,6 +21,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.lifecycle.asLiveData
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
@@ -35,6 +37,7 @@ import com.uploadity.api.linkedin.datamodels.Media
 import com.uploadity.api.tumblr.TumblrApiInterface
 import com.uploadity.api.tumblr.TumblrApiServiceBuilder
 import com.uploadity.api.tumblr.datamodels.TumblrCreatePostParams
+import com.uploadity.api.tumblr.datamodels.TumblrDeletePostParams
 import com.uploadity.api.twitter.TwitterApiInterface
 import com.uploadity.api.twitter.TwitterApiServiceBuilder
 import com.uploadity.api.twitter.datamodels.CreateTwitterPostParams
@@ -59,6 +62,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import okhttp3.logging.HttpLoggingInterceptor
 import okio.IOException
 import org.json.JSONException
 import org.json.JSONObject
@@ -68,6 +72,7 @@ import retrofit2.Response
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+
 
 class NewPostActivity : AppCompatActivity() {
 
@@ -105,7 +110,7 @@ class NewPostActivity : AppCompatActivity() {
         }
 
         if (intent != null && intent.extras != null) {
-            toolbar.title = "Edit Post"
+            toolbar.title = "Edytuj post"
             isInEditMode = true
             
             binding.cancelButton.visibility = View.GONE
@@ -114,7 +119,7 @@ class NewPostActivity : AppCompatActivity() {
             loadPost(intent.extras!!.getInt("post_id"))
 
         } else {
-            toolbar.title = "Create New Post"
+            toolbar.title = "Nowy post"
             isInEditMode = false
             post = Post(0, "", "", "", true, false, "")
         }
@@ -298,7 +303,6 @@ class NewPostActivity : AppCompatActivity() {
 
             for (account in accountList) {
                 if (account.socialMediaServiceName == SocialMediaPlatforms.TUMBLR.platformName) {
-                    //TODO: iteracja po blogach i osobne chipy
                     val blogList = appDao.blogDao().getBlogsByAccountId(account.id)
 
                     if (blogList.isNotEmpty()) {
@@ -377,6 +381,7 @@ class NewPostActivity : AppCompatActivity() {
 
             val file = createImageFile()
             val client = OkHttpClient()
+
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("media", file.name, file.asRequestBody("application/octet-stream".toMediaType()))
@@ -386,6 +391,17 @@ class NewPostActivity : AppCompatActivity() {
                 .post(requestBody)
                 .addHeader("Authorization", authorizationHeader)
                 .build()
+
+            Log.d("X UPLOAD", "requestBody ${requestBody.parts}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.parts.first().headers}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.parts.first().body.contentType()?.type}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.parts.first().body.contentType()?.subtype}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.type}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.boundary}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.contentType()}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.type.type}")
+            Log.d("X UPLOAD", "requestBody ${requestBody.type.subtype}")
+            Log.d("X UPLOAD", "request ${request.toString()}")
 
             client.newCall(request).enqueue(object: okhttp3.Callback {
                 override fun onFailure(call: okhttp3.Call, e: IOException) {
@@ -441,43 +457,35 @@ class NewPostActivity : AppCompatActivity() {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                 val responseBody = response.body()
 
-                if (responseBody != null) {
-                    Log.d("twitter post response", "response ${responseBody.string()}")
-                }
+                if (responseBody != null && twitterAccount != null) {
+                    try {
+                        val responseModel = response.body()?.string().toString()
+                        val jsonObject = JSONObject(responseModel)
+                        val postId = JSONObject(jsonObject["data"].toString())["id"].toString()
 
-                if (twitterAccount != null) {
-                    //post account success
-                    appDao.postAccountDao().insert(
-                        PostAccount(
-                            post.id,
-                            twitterAccount.id,
-                            -1,
-                            true,
-                            null,
-                            SocialMediaPlatforms.TWITTER.platformName,
-                            twitterAccount.name ?: ""
+                        //post account success
+                        appDao.postAccountDao().insert(
+                            PostAccount(
+                                post.id,
+                                twitterAccount.id,
+                                -1,
+                                postId,
+                                true,
+                                null,
+                                SocialMediaPlatforms.TWITTER.platformName,
+                                twitterAccount.name ?: "",
+                                post.description.toString()
+                            )
                         )
-                    )
+
+                    } catch (e: JSONException) {
+                        Log.e("Tumblr post failure", e.message.toString())
+                    }
                 }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                 Log.e("twitter post failure", t.message.toString())
-
-                if (twitterAccount != null) {
-                    //post account failure
-                    appDao.postAccountDao().insert(
-                        PostAccount(
-                            post.id,
-                            twitterAccount.id,
-                            -1,
-                            false,
-                            null,
-                            SocialMediaPlatforms.TWITTER.platformName,
-                            twitterAccount.name ?: ""
-                        )
-                    )
-                }
             }
         })
     }
@@ -543,38 +551,41 @@ class NewPostActivity : AppCompatActivity() {
                         call: Call<ResponseBody>,
                         response: Response<ResponseBody>
                     ) {
-                        //Log.d("tumblr image code", response.code().toString())
-                        //Log.d("tumblr image msg", response.message())
+                        if (response.code() == 201) {
+                            //Log.d("tumblr image code", response.code().toString())
+                            //Log.d("tumblr image msg", response.message())
+                            //TODO: tumblr wziac z jsona id posta
 
-                        //post account success
-                        appDao.postAccountDao().insert(
-                            PostAccount(
-                                post.id,
-                                blog.accountId,
-                                blogId,
-                                true,
-                                null,
-                                SocialMediaPlatforms.TUMBLR.platformName,
-                                blog.name
-                            )
-                        )
+                            try {
+                                val responseModel = response.body()?.string().toString()
+                                val jsonObject = JSONObject(responseModel)
+                                val postId = JSONObject(jsonObject["response"].toString())["id"].toString()
+
+                                Log.d("POST ID", "tumblr $postId ")
+
+                                //post account success
+                                appDao.postAccountDao().insert(
+                                    PostAccount(
+                                        post.id,
+                                        blog.accountId,
+                                        blogId,
+                                        postId,
+                                        true,
+                                        null,
+                                        SocialMediaPlatforms.TUMBLR.platformName,
+                                        blog.name,
+                                        post.description.toString()
+                                    )
+                                )
+
+                            } catch (e: JSONException) {
+                                Log.e("Tumblr post failure", e.message.toString())
+                            }
+                        }
                     }
 
                     override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                         Log.e("tumblr image failure", t.message.toString())
-
-                        //post account failure
-                        appDao.postAccountDao().insert(
-                            PostAccount(
-                                post.id,
-                                blog.accountId,
-                                blogId,
-                                false,
-                                null,
-                                SocialMediaPlatforms.TUMBLR.platformName,
-                                blog.name
-                            )
-                        )
                     }
                 })
 
@@ -708,8 +719,7 @@ class NewPostActivity : AppCompatActivity() {
                     call: Call<ResponseBody>,
                     response: Response<ResponseBody>
                 ) {
-                    Log.d("publishPost onResponse", "code ${response.code()}")
-                    Log.d("publishPost onResponse", "headers ${response.headers()}")
+                    Log.d("x-linkedin-id", "value: ${response.headers()["x-linkedin-id"]}")
 
                     post.isPublished = true
                     appDao.postDao().update(post)
@@ -721,10 +731,12 @@ class NewPostActivity : AppCompatActivity() {
                                 post.id,
                                 linkedinAccount.id,
                                 -1,
+                                response.headers()["x-restli-id"] ?: "",
                                 true,
                                 null,
                                 SocialMediaPlatforms.LINKEDIN.platformName,
-                                linkedinAccount.name ?: ""
+                                linkedinAccount.name ?: "",
+                                post.description.toString()
                             )
                         )
                     }
@@ -733,21 +745,6 @@ class NewPostActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                     Log.e("publishPost onFailure", t.message.toString())
                     Log.e("publishPost onFailure", t.cause.toString())
-
-                    if (linkedinAccount != null) {
-                        //post account failure
-                        appDao.postAccountDao().insert(
-                            PostAccount(
-                                post.id,
-                                linkedinAccount.id,
-                                -1,
-                                false,
-                                null,
-                                SocialMediaPlatforms.LINKEDIN.platformName,
-                                linkedinAccount.name ?: ""
-                            )
-                        )
-                    }
                 }
             })
         }
@@ -794,22 +791,233 @@ class NewPostActivity : AppCompatActivity() {
             binding.descriptionText.visibility = View.VISIBLE
             binding.descriptionCharacterCount.visibility = View.GONE
 
-            //postaccounts
-            val postAccountList = appDao.postAccountDao().getPostAccountByPostId(postId)
-            Log.d("postAccountList", postAccountList.toString())
+            val postAccountsRecyclerView = binding.postAccountListPublished
+            val postAccountsListAdapter = PostAccountItemListAdapter()
+            val postAccountListLiveData = appDatabase.allPostAccounts.asLiveData()
 
-            if (postAccountList.isNotEmpty()) {
-                binding.publishedSection.visibility = View.VISIBLE
-                val postAccountsRecyclerView = binding.postAccountListPublished
-                val postAccountsListAdapter = PostAccountItemListAdapter()
+            postAccountsRecyclerView.adapter = postAccountsListAdapter
+            postAccountsRecyclerView.layoutManager = LinearLayoutManager(this)
+            postAccountsRecyclerView.addItemDecoration(DividerItemDecoration(this, LinearLayoutManager.VERTICAL).apply {
+                AppCompatResources.getDrawable(this@NewPostActivity, R.drawable.margin_vertical_20dp)
+                    ?.let { this.setDrawable(it) }
+            })
 
-                postAccountsListAdapter.submitList(postAccountList)
-                postAccountsRecyclerView.adapter = postAccountsListAdapter
-                postAccountsRecyclerView.layoutManager = LinearLayoutManager(this)
-                postAccountsRecyclerView.addItemDecoration(DividerItemDecoration(this, LinearLayoutManager.VERTICAL).apply {
-                    AppCompatResources.getDrawable(this@NewPostActivity, R.drawable.margin_vertical_20dp)
-                        ?.let { this.setDrawable(it) }
+            postAccountListLiveData.observe(this) { postAccountList ->
+                val currentPostAccountList = postAccountList.filter { it.postId == post.id }
+                Log.d("currentPostAccountList", currentPostAccountList.toString())
+
+                if (currentPostAccountList.isNotEmpty()) {
+                    binding.publishedSection.visibility = View.VISIBLE
+                    postAccountsListAdapter.submitList(currentPostAccountList)
+
+                } else {
+                    binding.publishedSection.visibility = View.GONE
+                }
+            }
+
+            postAccountsListAdapter.setOnClickListener(object : PostAccountItemListAdapter.OnClickListener {
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onClick(position: Int, post: PostAccount) {
+                    val builder: AlertDialog.Builder = this.let {
+                        AlertDialog.Builder(this@NewPostActivity)
+                    }
+
+                    if (post.socialMediaPlatformName == SocialMediaPlatforms.TUMBLR.platformName) {
+                        builder.setMessage("Czy na pewno chcesz usunąć ten post z bloga ${post.name}?")
+
+                    } else {
+                        builder.setMessage("Czy na pewno chcesz usunąć ten post z konta ${post.name}?")
+                    }
+
+                    builder.apply {
+                        setPositiveButton("usuń"
+                        ) { _, _ ->
+                            deletePostFromAccount(post, postAccountsListAdapter, position)
+                        }
+
+                        setNegativeButton("nie"
+                        ) { dialog, _ ->
+                            dialog.cancel()
+                        }
+                    }
+
+                    builder.create().show()
+                }
+            })
+
+            postAccountsListAdapter.setOnEditButtonClickListener(object
+                :PostAccountItemListAdapter.OnEditButtonClickListener {
+                override fun onClick(position: Int, post: PostAccount) {
+                    Log.d("OnEditButtonClickListener", "position $position post $post")
+                    val intent = Intent(this@NewPostActivity, EditPostAccountActivity::class.java)
+                    intent.putExtra("postId", post.postId)
+                    intent.putExtra("accountId", post.accountId)
+                    intent.putExtra("blogId", post.blogId)
+                    startActivity(intent)
+                }
+            })
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun deletePostFromAccount(postAccount: PostAccount, adapter: PostAccountItemListAdapter,
+                                      position: Int) {
+        val userDataStore = UserDataStore(this)
+
+        when (postAccount.socialMediaPlatformName) {
+            SocialMediaPlatforms.TWITTER.platformName -> {
+                var accessToken = ""
+                var accessTokenSecret = ""
+
+                runBlocking {
+                    accessToken =
+                        userDataStore.getStringPreference(getString(R.string.twitter_access_token_key))
+                }
+
+                runBlocking {
+                    accessTokenSecret =
+                        userDataStore.getStringPreference(getString(R.string.twitter_access_token_secret_key))
+                }
+
+                val twitterApi = TwitterApiServiceBuilder.buildService(TwitterApiInterface::class.java)
+                val parameterMap = mutableMapOf<String, String>()
+                parameterMap["oauth_token"] = accessToken
+                val authorizationHeader = TwitterApiTools().generateDeleteAuthorizationHeader(
+                    "https://api.twitter.com/2/tweets/${postAccount.publishedPostId}",
+                    parameterMap,
+                    accessTokenSecret
+                )
+
+                twitterApi.deleteTwitterPost(
+                    authorizationHeader,
+                    postAccount.publishedPostId
+
+                ).enqueue(object : Callback<ResponseBody> {
+                    override fun onResponse(
+                        call: Call<ResponseBody>,
+                        response: Response<ResponseBody>
+                    ) {
+                        Log.d("DELETE SUCCESS", "twitter response code: ${response.code()}")
+
+                        if (response.code() == 200) {
+                            appDao.postAccountDao().delete(postAccount)
+                            adapter.notifyItemRemoved(position)
+                            Snackbar.make(
+                                binding.root, "Post z platformy X pomyślnie usunięty",
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+
+                        } else {
+                            Log.e("DELETE FAILURE", response.message())
+                            Snackbar.make(
+                                binding.root, "Wystąpił błąd przy usuwaniu posta",
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                        Log.e("DELETE FAILURE", t.message.toString())
+                        Snackbar.make(
+                            binding.root, "Wystąpił błąd przy usuwaniu posta",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
                 })
+            }
+
+            SocialMediaPlatforms.TUMBLR.platformName -> {
+                val tumblrApi = TumblrApiServiceBuilder.buildService(TumblrApiInterface::class.java)
+                val blog = appDao.blogDao().getBlogById(postAccount.blogId)
+                var accessToken = ""
+
+                runBlocking {
+                    accessToken =
+                        userDataStore.getStringPreference(getString(R.string.tumblr_access_token_key))
+                }
+
+                if (accessToken.isNotEmpty() && blog != null) {
+                    tumblrApi.deletePost(
+                        "Bearer $accessToken",
+                        blog.uuid,
+                        TumblrDeletePostParams(postAccount.publishedPostId)
+
+                    ).enqueue(object : Callback<ResponseBody> {
+                        override fun onResponse(
+                            call: Call<ResponseBody>,
+                            response: Response<ResponseBody>
+                        ) {
+                            Log.d("DELETE SUCCESS", "tumblr response code: ${response.code()}")
+
+                            if (response.code() == 200) {
+                                appDao.postAccountDao().delete(postAccount)
+                                adapter.notifyItemRemoved(position)
+                                Snackbar.make(
+                                    binding.root, "Post z platformy Tumblr pomyślnie usunięty",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+
+                            } else {
+                                Log.e("DELETE FAILURE", response.message())
+                                Snackbar.make(
+                                    binding.root, "Wystąpił błąd przy usuwaniu posta",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+
+                        override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                            Log.e("DELETE FAILURE", t.message.toString())
+                            Snackbar.make(
+                                binding.root, "Wystąpił błąd przy usuwaniu posta",
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+                    })
+                }
+            }
+
+            SocialMediaPlatforms.LINKEDIN.platformName -> {
+                val linkedinApi = LinkedinApiServiceBuilder.buildService(
+                    LinkedinApiInterface::class.java
+                )
+
+                //access token
+                var accessToken = ""
+
+                runBlocking {
+                    accessToken =
+                        userDataStore.getStringPreference(getString(R.string.linkedin_access_token_key))
+                }
+
+                if (accessToken.isNotEmpty()) {
+                    linkedinApi.deletePost(
+                        "Bearer $accessToken",
+                        postAccount.publishedPostId
+
+                    ).enqueue(object : Callback<ResponseBody> {
+                        override fun onResponse(
+                            call: Call<ResponseBody>,
+                            response: Response<ResponseBody>
+                        ) {
+                            Log.d("DELETE SUCCESS", "response code: ${response.code()}")
+                            appDao.postAccountDao().delete(postAccount)
+                            adapter.notifyItemRemoved(position)
+                            Snackbar.make(
+                                binding.root, "Post z platformy Linkedin pomyślnie usunięty",
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                            Log.e("DELETE FAILURE", t.message.toString())
+                            Snackbar.make(
+                                binding.root, "Wystąpił błąd przy usuwaniu posta",
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+                    })
+                }
             }
         }
     }
@@ -923,16 +1131,6 @@ class NewPostActivity : AppCompatActivity() {
 
             } else {
                 Snackbar.make(binding.root, "Wybierz zdjęcie", Snackbar.LENGTH_SHORT).show()
-
-                /*appDao.postDao().insert(
-                    Post(
-                        0, title.text.toString(),
-                        description.text.toString(), "", isPicture,
-                        false, ""
-                    )
-                )
-
-                Log.d("save post", "Post id ${post.id} media uri empty ismediaselsected $isMediaSelected")*/
             }
         }
     }

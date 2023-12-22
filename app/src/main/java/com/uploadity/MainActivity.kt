@@ -1,17 +1,11 @@
 package com.uploadity
 
-import android.content.ContentValues
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.Network
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
-import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
@@ -32,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
         val navView: BottomNavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
         navView.setupWithNavController(navController)

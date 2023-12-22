@@ -38,6 +38,8 @@
     <string name="dodaj_nowe_konto">Dodaj nowe konto</string>
     <string name="lista_kont">Lista kont</string>
     <string name="opublikowano_na">Opublikowano na:</string>
-    <string name="usun_post">Usuń</string>
+    <string name="usun_post">Usuń post</string>
     <string name="usunieto_na">Usunięto na:</string>
+    <string name="aktualizuj">Aktualizuj</string>
+    <string name="nazwa_konta">Nazwa konta lub bloga</string>
 </resources>

@@ -21,18 +21,18 @@
         android:theme="@style/Theme.Uploadity"
         tools:targetApi="tiramisu">
         <activity
+            android:name=".EditPostAccountActivity"
+            android:exported="false" />
+        <activity
             android:name=".AccountActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -43,7 +43,6 @@
                 <data android:host="www.uploadity.net.pl" />
                 <data android:pathPrefix="/linkedin" />
             </intent-filter>
-
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -54,7 +53,6 @@
                 <data android:host="uploadity.net.pl" />
                 <data android:pathPrefix="/linkedin" />
             </intent-filter>
-
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 

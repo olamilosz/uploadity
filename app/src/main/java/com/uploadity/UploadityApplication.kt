@@ -6,5 +6,5 @@ import com.uploadity.database.AppDatabaseRepository
 
 class UploadityApplication : Application() {
     val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
-    val repository: AppDatabaseRepository by lazy { AppDatabaseRepository(database.accountDao(), database.blogDao(), database.postDao()) }
+    val repository: AppDatabaseRepository by lazy { AppDatabaseRepository(database.accountDao(), database.blogDao(), database.postDao(), database.postAccountDao()) }
 }

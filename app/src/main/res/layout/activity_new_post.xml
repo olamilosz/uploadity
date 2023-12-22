@@ -181,25 +181,22 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
-                    android:text="@string/opublikowano_na"/>
+                    android:text="@string/opublikowano_na"
+                    android:visibility="visible"
+                    tools:visibility="visible"/>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/post_account_list_published"
+                <RelativeLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp" />
+                    android:layout_height="wrap_content">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:text="@string/usunieto_na"/>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/post_account_list_deleted"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
-
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/post_account_list_published"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:visibility="visible"
+                        tools:visibility="visible" />
+                </RelativeLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -223,7 +220,7 @@
                     android:layout_marginEnd="5dp"
                     android:layout_weight="1"
                     android:backgroundTint="@color/red"
-                    android:text="@string/usun"
+                    android:text="@string/usun_post"
                     android:visibility="gone"
                     tools:ignore="ButtonStyle" />
 

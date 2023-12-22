@@ -7,31 +7,43 @@
     android:layout_height="wrap_content"
     android:divider="@drawable/margin_horizontal_10dp"
     android:gravity="fill_horizontal|center_vertical"
-    android:padding="10dp"
     android:showDividers="middle"
     tools:ignore="RtlHardcoded">
 
     <ImageView
         android:id="@+id/icon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop"
         app:srcCompat="@drawable/ic_image_placeholder" />
 
     <TextView
         android:id="@+id/text_view"
-        style="@style/DarkGreyText"
+        style="@style/DarkGreyText16"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:singleLine="true"
         tools:text="Title title tit title " />
 
-    <Button
+    <ImageButton
+        android:id="@+id/edit_button"
+        style="@android:style/Widget.ImageButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:backgroundTint="@color/purple_500"
+        android:contentDescription="@string/usun"
+        android:src="@drawable/baseline_edit_note_24"
+        android:visibility="gone" />
+
+    <ImageButton
         android:id="@+id/delete_button"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        style="@android:style/Widget.ImageButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:backgroundTint="@color/red"
-        android:text="@string/usun_post" />
+        android:contentDescription="@string/usun"
+        android:src="@drawable/baseline_delete_forever_24"
+        android:visibility="visible" />
 </LinearLayout>
