@@ -24,6 +24,19 @@ A multifunctional mobile application that simplifies social media management by 
 * OAuth 1.0 & 2.0
 * [Implementation details (in Polish)](https://uploadity.net.pl/)
 
+## API keys
+To integrate these API keys securely into our mobile app, I store them in a configuration file called `local.properties`. This file resides in the root directory of the project (not included in this repository). If you want to test this app, follow these steps:
+* Create a new file and name it `local.properties`.
+* Add API Keys: Within the `local.properties` file, specify each API key using the following format:
+```
+LINKEDIN_CLIENT_ID="XXX"
+LINKEDIN_CLIENT_SECRET="XXX"
+TUMBLR_CLIENT_ID="XXX"
+TUMBLR_CLIENT_SECRET="XXX"
+TWITTER_CLIENT_ID="XXX"
+TWITTER_CLIENT_SECRET="XXX"
+```
+
 ## Contact
 Aleksandra Miloch - [Linkedin](https://www.linkedin.com/in/aleksandra-miloch/) - [Website](https://aleksandramiloch.pl/) - milochaleksandra@gmail.com <br/>
 Project Page (in Polish): [uploadity.net.pl](https://uploadity.net.pl/) <br/>
