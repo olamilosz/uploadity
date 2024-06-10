@@ -4,13 +4,13 @@ A multifunctional mobile application that simplifies social media management by 
 
 ## Screenshots
 <p>
-  <img src="https://uploadity.net.pl/screenshots/screen1.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen2.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen3.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen4.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen5.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen6.png" width="200">
-  <img src="https://uploadity.net.pl/screenshots/screen7.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen1.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen2.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen3.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen4.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen5.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen6.png" width="200">
+  <img src="http://aleksandramiloch.pl/uploadity/screenshots/screen7.png" width="200">
 </p>
 
 ## Tech stack
@@ -22,7 +22,7 @@ A multifunctional mobile application that simplifies social media management by 
 * MVVM
 * Deep links
 * OAuth 1.0 & 2.0
-* [Implementation details (in Polish)](https://uploadity.net.pl/)
+* [Implementation details (in Polish)](http://aleksandramiloch.pl/uploadity/)
 
 ## API keys
 To integrate these API keys securely into our mobile app, I store them in a configuration file called `local.properties`. This file resides in the root directory of the project (not included in this repository). If you want to test this app, follow these steps:
@@ -39,4 +39,4 @@ TWITTER_CLIENT_SECRET="XXX"
 
 ## Contact
 Aleksandra Miloch - [Linkedin](https://www.linkedin.com/in/aleksandra-miloch/) - [Website](https://aleksandramiloch.pl/) - milochaleksandra@gmail.com <br/>
-Project Page (in Polish): [uploadity.net.pl](https://uploadity.net.pl/) <br/>
+Project Page (in Polish): [uploadity.net.pl](http://aleksandramiloch.pl/uploadity/) <br/>
